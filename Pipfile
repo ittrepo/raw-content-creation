@@ -9,6 +9,8 @@ openpyxl = "*"
 notebook = "*"
 sqlalchemy = "*"
 pymysql = "*"
+python-dotenv = "*"
+xmltodict = "*"
 
 [dev-packages]
 
