@@ -1,11 +1,6 @@
 import os
 import requests
 import json
-import os
-import requests
-import json
-import xml.etree.ElementTree as ET
-import json
 import xml.etree.ElementTree as ET
 
 # Base directory where all folders will be created.
@@ -19,12 +14,9 @@ def get_hotel_mapping(ittid):
       GiataCode: 63919
     """
     # Replace with real database call as needed.
-    return {"VervotechId": "39654021", "GiataCode": "63919"}
+    return {"VervotechId": "39758740", "GiataCode": "602756"}
 
 def create_directory(path):
-    """
-    Create a directory if it does not already exist.
-    """
     try:
         os.makedirs(path, exist_ok=True)
         print(f"Directory created: {path}")
@@ -32,18 +24,11 @@ def create_directory(path):
         print(f"Error creating directory {path}: {e}")
 
 def create_main_folder(ittid):
-    """
-    Create the main folder using the provided ittid.
-    Example: D:\content_for_hotel_json\row_hotel\itt1111
-    """
     main_folder = os.path.join(BASE_DIR, ittid)
     create_directory(main_folder)
     return main_folder
 
 def create_subfolders_for_mapping(main_folder, mapping):
-    """
-    Create subfolders for VervotechId and GiataCode.
-    """
     vervotech_folder = os.path.join(main_folder, f"vervotechid_{mapping['VervotechId']}")
     giata_folder = os.path.join(main_folder, f"giatacode_{mapping['GiataCode']}")
     create_directory(vervotech_folder)
@@ -51,9 +36,6 @@ def create_subfolders_for_mapping(main_folder, mapping):
     return vervotech_folder, giata_folder
 
 def get_provider_hotel_mappings_by_vervotechid(vervotech_id):
-    """
-    Call the Vervotech Supplier API to fetch provider hotel mappings for the given VervotechId.
-    """
     url = f"https://hotelmapping.vervotech.com/api/3.0/mappings/GetProviderHotelMappingsByVervotechId?vervotechId={vervotech_id}"
     headers = {
         'accountid': 'gtrs',
@@ -70,10 +52,6 @@ def get_provider_hotel_mappings_by_vervotechid(vervotech_id):
         return None
 
 def create_supplier_folders(base_folder, provider_hotels):
-    """
-    Create a folder for each supplier in the base folder (which is the Vervotech folder).
-    Each folder name is in the format <providerfamily>_<providerhotelid> in lowercase.
-    """
     supplier_folders = {}
     for hotel in provider_hotels:
         provider_id = hotel.get("ProviderHotelId", "").lower()
@@ -81,14 +59,10 @@ def create_supplier_folders(base_folder, provider_hotels):
         folder_name = f"{provider_family}_{provider_id}"
         folder_path = os.path.join(base_folder, folder_name)
         create_directory(folder_path)
-        # Save folder path using a key based on provider details.
         supplier_folders[(provider_id, provider_family)] = folder_path
     return supplier_folders
 
 def get_provider_content(provider_hotel_id, provider_family):
-    """
-    Call the Provider Content API to retrieve content for a given supplier.
-    """
     url = "https://hotelmapping.vervotech.com/api/3.0/content/GetProviderContentByProviderHotelIds"
     payload = json.dumps({
         "ProviderHotelIdentifiers": [
@@ -114,9 +88,6 @@ def get_provider_content(provider_hotel_id, provider_family):
         return None
 
 def save_json_to_file(data, filepath):
-    """
-    Save JSON data to a file.
-    """
     try:
         with open(filepath, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=4)
@@ -124,10 +95,7 @@ def save_json_to_file(data, filepath):
     except Exception as e:
         print(f"Error saving JSON to {filepath}: {e}")
 
-
-
 def get_giata_data(giata_code):
-    """Fetch Giata property data in XML format"""
     url = f"https://multicodes.giatamedia.com/webservice/rest/1.latest/properties/{giata_code}"
     headers = {
         'Authorization': 'Basic Z2lhdGF8bm9mc2hvbi10b3Vycy5jb206Tm9mc2hvbjEyMy4='
@@ -141,22 +109,27 @@ def get_giata_data(giata_code):
         return None
 
 def parse_giata_providers(xml_data):
-    """Parse XML to extract active provider codes"""
     providers = []
     try:
         root = ET.fromstring(xml_data)
         for provider in root.findall('.//propertyCodes/provider'):
             provider_code = provider.get('providerCode').lower()
-            for code in provider.findall('code'):
-                if code.get('status') != 'inactive':
-                    value = code.find('value').text.strip()
-                    providers.append((provider_code, value))
+            # Handle InnstantTravel specifically
+            if provider_code == "innstanttravel":
+                for code in provider.findall('code'):
+                    if code.get('status') != 'inactive':
+                        value = code.find('value').text.strip()
+                        providers.append(("innstanttravel", value))  # Force provider_code to match
+            else:
+                for code in provider.findall('code'):
+                    if code.get('status') != 'inactive':
+                        value = code.find('value').text.strip()
+                        providers.append((provider_code, value))
     except Exception as e:
         print(f"Error parsing Giata XML: {e}")
     return providers
 
 def create_giata_provider_folders(giata_folder, providers):
-    """Create folders for Giata providers"""
     folders = {}
     for provider_code, code_value in providers:
         folder_name = f"{provider_code}_{code_value}".lower().replace(" ", "_")
@@ -165,40 +138,32 @@ def create_giata_provider_folders(giata_folder, providers):
         folders[(provider_code, code_value)] = folder_path
     return folders
 
-
 def xml_to_dict(element):
     """Recursively convert XML element to dictionary, including namespaces, attributes, and text"""
     result = {}
     
-    # Process attributes (if any)
     if element.attrib:
         result["@attributes"] = {}
         for attr, value in element.attrib.items():
-            # Remove namespace if present
             if "}" in attr:
                 attr = attr.split("}")[1]
             result["@attributes"][attr] = value
 
-    # List of child elements
     children = list(element)
     if children:
         for child in children:
-            # Remove namespace from tag name
             tag = child.tag.split("}")[1] if "}" in child.tag else child.tag
             child_dict = xml_to_dict(child)
             if tag in result:
-                # If the tag already exists, convert it to a list
                 if not isinstance(result[tag], list):
                     result[tag] = [result[tag]]
                 result[tag].append(child_dict)
             else:
                 result[tag] = child_dict
         
-        # If there is text outside of children, add it as well
         if element.text and element.text.strip():
             result["#text"] = element.text.strip()
     else:
-        # No children: include text if it exists
         text = element.text.strip() if element.text else ""
         if result:
             if text:
@@ -208,10 +173,8 @@ def xml_to_dict(element):
 
     return result
 
-
 def fetch_giata_endpoint(url_suffix, giata_code, lang=None):
     """Fetch Giata API data and convert XML response to JSON"""
-    # Determine the base URL based on the endpoint
     if url_suffix.startswith("properties/"):
         base_url = "https://multicodes.giatamedia.com/webservice/rest/1.latest/"
     else:
@@ -223,22 +186,18 @@ def fetch_giata_endpoint(url_suffix, giata_code, lang=None):
     }
     
     try:
-        # Fetch data from the API
         response = requests.post(url, headers=headers)
         response.raise_for_status()
         
-        # Parse XML response
         xml_data = response.text
         root = ET.fromstring(xml_data)
         
-        # Convert XML to dictionary
         json_data = xml_to_dict(root)
         return json_data
     
     except Exception as e:
         print(f"Error fetching or processing {url_suffix}: {e}")
         return None
-    
 
 def save_json_file(data, filepath):
     """Save JSON data to a file"""
@@ -251,7 +210,6 @@ def save_json_file(data, filepath):
 
 def process_giata_data(giata_folder, giata_code):
     """Main processing function for Giata data"""
-    # Fetch and parse Giata data
     xml_data = get_giata_data(giata_code)
     if not xml_data:
         return
@@ -261,10 +219,8 @@ def process_giata_data(giata_folder, giata_code):
         print("No active providers found in Giata data")
         return
     
-    # Create provider folders
     provider_folders = create_giata_provider_folders(giata_folder, providers)
     
-    # Define endpoints and their file names
     endpoints = [
         ('properties/{giata}', 'basic.json'),
         ('images/{giata}', 'image.json'),
@@ -272,7 +228,6 @@ def process_giata_data(giata_folder, giata_code):
         ('factsheets/{giata}', 'facility.json')
     ]
     
-    # Fetch and save data for each provider folder
     for folder_path in provider_folders.values():
         for url_suffix, filename in endpoints:
             json_data = fetch_giata_endpoint(
@@ -284,11 +239,52 @@ def process_giata_data(giata_folder, giata_code):
                 file_path = os.path.join(folder_path, filename)
                 save_json_file(json_data, file_path)
 
+# -------------------------------
+# New functions for Innstant travel API
+# -------------------------------
 
+def fetch_innstanttravel_data(hotel_id):
+    url = f"https://static-data.innstant-servers.com/hotels/{hotel_id}"
+    headers = {
+        'aether-application-key': '$2y$10$Z3AZlsF.gtIUUwa4LE2Bqugx9hrJp76ksNpc44oM2.TOINkBtjj1m',
+        'aether-access-token': '$2y$10$R2/rYvapSB4R2sC4BlIOyeA8EuUjBaL1Gm5id372wWeh0m6e1QwLO'
+    }
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        data = response.json()  
+        print(f"Received Innstant travel data for hotel {hotel_id}:", data)
+        return data
+    except Exception as e:
+        print(f"Error fetching Innstant travel data for hotel {hotel_id}: {e}")
+        return None
 
-
-
-
+def process_innstanttravel_data(giata_folder, vervotech_folder, innstant_ids):
+    for hotel_id in innstant_ids:
+        folder_name = f"innstanttravel_{hotel_id}"
+        # Build potential folder paths under each subfolder
+        path_giata = os.path.join(giata_folder, folder_name)
+        path_vervotech = os.path.join(vervotech_folder, folder_name)
+        
+        # Check if the folder exists in the giata folder first, then in the vervotech folder
+        if os.path.exists(path_giata):
+            folder_path = path_giata
+            print(f"Found existing folder in giata: {folder_path}")
+        elif os.path.exists(path_vervotech):
+            folder_path = path_vervotech
+            print(f"Found existing folder in vervotech: {folder_path}")
+        else:
+            # Create the folder in the giata folder by default
+            folder_path = path_giata
+            create_directory(folder_path)
+            print(f"Created new innstanttravel folder: {folder_path}")
+        
+        # Fetch and save data
+        json_data = fetch_innstanttravel_data(hotel_id)
+        if json_data:
+            file_name = f"own_innstanttravel_{hotel_id}.json"
+            file_path = os.path.join(folder_path, file_name)
+            save_json_file(json_data, file_path)
 
 
 def main(ittid):
@@ -323,8 +319,16 @@ def main(ittid):
     
     # Step 7: Process Giata data
     process_giata_data(giata_folder, mapping['GiataCode'])
-
+    
+    # Step 8: Process Innstant travel data for all IDs
+    xml_data = get_giata_data(mapping['GiataCode'])
+    if xml_data:
+        providers = parse_giata_providers(xml_data)
+        # Extract all InnstantTravel IDs
+        innstant_ids = [value for (code, value) in providers if code == "innstanttravel"]
+        if innstant_ids:
+            process_innstanttravel_data(giata_folder, vervotech_folder, innstant_ids)
 
 if __name__ == '__main__':
-    # Run the process for ittid 'itt1111'
-    main("itt1111")
+    # Run the process for ittid 'itt1112'
+    main("itt1112")

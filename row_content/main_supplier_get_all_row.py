@@ -6,13 +6,6 @@ import xml.etree.ElementTree as ET
 BASE_DIR = r"D:\content_for_hotel_json\row_hotel"
 
 def get_hotel_mapping(ittid):
-    """
-    Simulate a database query that returns the mapping for a given ittid.
-    For example, for 'itt1111' it returns:
-      VervotechId: 39654021
-      GiataCode: 63919
-    """
-    # Replace with real database call as needed.
     return {"VervotechId": "39758740", "GiataCode": "602756"}
 
 def create_directory(path):
@@ -238,9 +231,6 @@ def process_giata_data(giata_folder, giata_code):
                 file_path = os.path.join(folder_path, filename)
                 save_json_file(json_data, file_path)
 
-
-
-
 # -------------------------------
 # New functions for Innstant travel API
 # -------------------------------
@@ -286,6 +276,41 @@ def process_innstanttravel_data(giata_folder, vervotech_folder, innstant_ids):
             file_path = os.path.join(folder_path, file_name)
             save_json_file(json_data, file_path)
 
+# -------------------------------
+# New functions for GRN Connect API
+# -------------------------------
+
+def fetch_grnconnect_data(hcode):
+    url = f"https://api-sandbox.grnconnect.com/api/v3/hotels?hcode={hcode}&version=2.0"
+    headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Accept-Encoding': 'application/gzip',
+        'api-key': 'cda7a3d1a85a048030eca511a2805c59'
+    }
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        data = response.json()
+        print(f"Received GRN Connect data for hcode {hcode}:", data)
+        return data
+    except Exception as e:
+        print(f"Error fetching GRN Connect data for hcode {hcode}: {e}")
+        return None
+
+def process_grnconnect_data(giata_folder, grnconnect_hcode):
+    folder_name = f"grnconnect_{grnconnect_hcode}"
+    folder_path = os.path.join(giata_folder, folder_name)
+    if os.path.exists(folder_path):
+        print(f"Found existing folder for GRN Connect: {folder_path}")
+    else:
+        create_directory(folder_path)
+        print(f"Created new GRN Connect folder: {folder_path}")
+    json_data = fetch_grnconnect_data(grnconnect_hcode)
+    if json_data:
+        file_name = f"own_grnconnect_{grnconnect_hcode}.json"
+        file_path = os.path.join(folder_path, file_name)
+        save_json_file(json_data, file_path)
 
 def main(ittid):
     # Step 1: Retrieve hotel mapping data (simulate database lookup)
@@ -325,6 +350,12 @@ def main(ittid):
         innstant_ids = [value for (code, value) in providers if code == "innstanttravel"]
         if innstant_ids:
             process_innstanttravel_data(giata_folder, vervotech_folder, innstant_ids)
+    
+    # -------------------------------
+    # New block for GRN Connect API
+    # -------------------------------
+    grnconnect_hcode = "1436331"  
+    process_grnconnect_data(giata_folder, grnconnect_hcode)
 
 if __name__ == '__main__':
     main("itt1112")
