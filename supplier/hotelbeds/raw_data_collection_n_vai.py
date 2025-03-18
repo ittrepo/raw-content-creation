@@ -50,29 +50,23 @@ def get_supplier_own_raw_data(hotel_id):
 def save_json(raw_path, hotel_id):
     """Fetch data and save it as a JSON file in the specified path."""
 
-    # Define the full path for the JSON file
     json_file_path = os.path.join(raw_path, f"{hotel_id}.json")
 
-    # Fetch hotel data
     json_data = get_supplier_own_raw_data(hotel_id)
 
-    # If data fetch fails, save an empty JSON object
     if json_data is None or "Failed to fetch data" in str(json_data):
         print(f"Warning: {hotel_id}.json - Data fetch failed. Saving default empty JSON.")
         json_data = "{}"
 
-    # Save JSON data to the file
     with open(json_file_path, "w", encoding="utf-8") as file:
         file.write(json_data)
 
     print(f"{hotel_id}.json saved successfully at {json_file_path}")
 
-# Define base directory and hotel ID
 supplier = "hotelbeds"
 base_path = f"D:/content_for_hotel_json/cdn_row_collection/{supplier}"
 hotel_id = "1"
 
-# Ensure base directory exists
 if not os.path.exists(base_path):
     os.makedirs(base_path)
 
