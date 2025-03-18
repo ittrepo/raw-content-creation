@@ -39,7 +39,7 @@ def save_json(base_path, hotel_id, supplier):
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
     
-    file_name = f"giata_basic_info_{supplier}_{hotel_id}.json"
+    file_name = f"basic_{hotel_id}.json"
     full_file_path = os.path.join(dir_path, file_name)
     
     with open(full_file_path, "w", encoding="utf-8") as file:
@@ -48,8 +48,8 @@ def save_json(base_path, hotel_id, supplier):
     print(f"JSON data saved successfully at {full_file_path}")
 
 
-base_path = "D:/content_for_hotel_json/raw_hotel_info/hotelbeds"
-hotel_id = "58106631"
-supplier = "hotelston"
+base_path = "D:/content_for_hotel_json/raw_hotel_info/ratehawk"
+hotel_id = "country_del_sol_complejo_turistico"
+supplier = "ratehawk2"
 
 save_json(base_path, hotel_id, supplier)
