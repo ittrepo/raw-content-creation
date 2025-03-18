@@ -22,12 +22,17 @@ def giata_to_get_basic_info(supplier_name, hotel_id):
         xml_data = response.text
         
         dict_data = xmltodict.parse(xml_data)
+
+        giata_id = dict_data["properties"]["property"]["@giataId"]
         
         json_data = json.dumps(dict_data, indent=4)
-        return json_data
+        return json_data, giata_id
     else:
         print(f"Failed to fetch data. Status Code: {response.status_code}")
         return None
+
+
+
 
 def save_json(base_path, hotel_id, supplier):
     json_data = giata_to_get_basic_info(supplier, hotel_id)
@@ -47,10 +52,3 @@ def save_json(base_path, hotel_id, supplier):
         file.write(json_data)
     
     print(f"JSON data saved successfully at {full_file_path}")
-
-supplier = "hotelbeds"
-
-base_path = f"D:/content_for_hotel_json/raw_hotel_info/{supplier}"
-hotel_id = "58106631"
-
-save_json(base_path, hotel_id, supplier)
