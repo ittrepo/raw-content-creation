@@ -6,10 +6,11 @@ import os
 
 load_dotenv()
 
+
+HOTEL_ID_LIST = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/hotelbeds_hotel_id_list.txt"
+
 def giata_to_get_basic_info(supplier_name, hotel_id):
     GIATA_API_KEY = os.getenv("GIATA_API_KEY")
-    
-
     url = f"https://multicodes.giatamedia.com/webservice/rest/1.latest/properties/gds/{supplier_name}/{hotel_id}"
     headers = {
         'Authorization': f'Basic {GIATA_API_KEY}'
@@ -47,9 +48,9 @@ def save_json(base_path, hotel_id, supplier):
     
     print(f"JSON data saved successfully at {full_file_path}")
 
+supplier = "hotelbeds"
 
-base_path = "D:/content_for_hotel_json/raw_hotel_info/ratehawk"
+base_path = f"D:/content_for_hotel_json/raw_hotel_info/{supplier}"
 hotel_id = "country_del_sol_complejo_turistico"
-supplier = "ratehawk2"
 
 save_json(base_path, hotel_id, supplier)
