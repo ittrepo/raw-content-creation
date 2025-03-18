@@ -147,6 +147,54 @@ def save_json(giata_path, hotel_id, supplier):
     fetch_and_save_json(giata_to_get_text_info, f"text_{hotel_id}.json", giata_id)
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+def initialize_tracking_file(file_path, systemid_list):
+    """Initializes the tracking file with all SystemIds if it doesn't already exist."""
+    if not os.path.exists(file_path):
+        with open(file_path, "w", encoding="utf-8") as file:
+            file.write("\n".join(map(str, systemid_list)) + "\n")
+    else:
+        print(f"Tracking file already exists: {file_path}")
+
+def read_tracking_file(file_path):
+    """Reads the tracking file and returns a list of remaining SystemIds."""
+    if os.path.exists(file_path):
+        with open(file_path, "r", encoding="utf-8") as file:
+            return [line.strip() for line in file if line.strip()]
+    return []
+
+def write_tracking_file(file_path, remaining_ids):
+    """Updates the tracking file with unprocessed SystemIds."""
+    try:
+        with open(file_path, "w", encoding="utf-8") as file:
+            file.write("\n".join(remaining_ids) + "\n")
+    except Exception as e:
+        print(f"Error writing to tracking file: {e}")
+
+def append_to_not_found_file(file_path, system_id):
+    """Appends the SystemId to the not found file."""
+    try:
+        with open(file_path, "a", encoding="utf-8") as file:
+            file.write(system_id + "\n")
+    except Exception as e:
+        print(f"Error writing to not found file: {e}")
+
+
+
+
+
 # Example usage:
 supplier = "hotelbeds"
 base_path = f"D:/content_for_hotel_json/raw_hotel_info/{supplier}"
