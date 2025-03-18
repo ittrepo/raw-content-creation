@@ -44,6 +44,7 @@ def authentication_paximum():
 
 def get_supplier_own_raw_data(hotel_id):
     token = authentication_paximum()
+    # print(token)
     if not token:
         print(f"Authentication failed for hotel ID {hotel_id}.")
         return None
