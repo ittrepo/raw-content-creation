@@ -1,77 +1,56 @@
-import os
-import json
 import requests
-import base64
+import json
 from dotenv import load_dotenv
+import os
+import hashlib
+import time
 
-def load_credentials():
-    """Load credentials from environment variables."""
-    load_dotenv()
-    return {
-        'user_name': os.getenv('TOB_USERNAME', '').strip(),
-        'user_password': os.getenv('TOB_PASSWORD', '').strip(),
-        'base_url': os.getenv('TOB_BASE_URL', '').strip()
+load_dotenv()
+
+TBO_AUTHENTICATION = os.getenv("TBO_AUTHENTICATION")
+
+def get_supplier_own_raw_data(hotel_id):
+    TBO_AUTHENTICATION = os.getenv("TBO_AUTHENTICATION")
+
+    url = f"https://api.tbotechnology.in/TBOHolidays_HotelAPI/Hoteldetails"
+
+    payload = json.dumps({
+        "Hotelcodes": hotel_id,
+        "Language": "en"
+        })
+    headers = {
+    'Authorization': f'{TBO_AUTHENTICATION}',
+    'Content-Type': 'application/json'
     }
 
-def hotel_api_authentication(credentials):
-    """Generate authentication details."""
-    try:
-        authorization_basic = base64.b64encode(f"{credentials['user_name']}:{credentials['user_password']}".encode()).decode()
-        return {
-            'Authorization': f"Basic {authorization_basic}",
-            'Content-Type': 'application/json'
-        }
-    except Exception as e:
-        print(f"Error in hotel API authentication: {e}")
+    response = requests.post(url, headers=headers, data=payload)
+
+    if response.status_code == 200:
+        response_data = response.text
+        # print(response_data)
+        # json_data = json.dumps(response_data, indent=4)
+        return response_data
+    else:
+        print(f"Failed to fetch data. Status codeL {response.status_code}")
         return None
 
-def get_hotel_details(hotel_id):
-    """Fetch hotel details from the API."""
-    try:
-        print(hotel_id)
-        credentials = load_credentials()
-        headers = hotel_api_authentication(credentials)
-        base_url = credentials['base_url']
-        
-        if not headers or not base_url:
-            print("Missing authentication details.")
-            return None
-        
-        payload = {
-            "Hotelcodes": hotel_id,
-            "Language": "en"
-        }
-        
-        response = requests.post(f"{base_url}/Hoteldetails", headers=headers, json=payload)
-        
-        if response.status_code == 200:
-            data = response.json()
-            return data
-        else:
-            print(f"Failed to fetch hotel details: {response.text}")
-            return None
-    except Exception as e:
-        print(f"Error in fetching hotel details: {e}")
-        return None
+
 
 def save_json(raw_path, hotel_id):
+    """Fetch data and save it as a JSON file in the specified path."""
+
     json_file_path = os.path.join(raw_path, f"{hotel_id}.json")
-    hotel_data = get_hotel_details(hotel_id)
-    
-    if hotel_data is None:
+
+    json_data = get_supplier_own_raw_data(hotel_id)
+
+    if json_data is None or "Failed to fetch data" in str(json_data):
         print(f"Warning: {hotel_id}.json - Data fetch failed. Saving default empty JSON.")
-        hotel_data = {}
-    
+        json_data = "{}"
+
     with open(json_file_path, "w", encoding="utf-8") as file:
-        json.dump(hotel_data, file, indent=4)
-    
+        file.write(json_data)
+
     print(f"{hotel_id}.json saved successfully at {json_file_path}")
-
-
-
-
-
-
 
 
 
@@ -82,6 +61,7 @@ def save_json(raw_path, hotel_id):
 HOTEL_ID_LIST = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/tbo/tbohotel_hotel_id_list.txt"
 TRACKING_FILE = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/tbo/tbohotel_tracking_file.txt"
 NOT_FOUND_FILE = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/tbo/tbohotel_not_found.txt"
+TOTAL_DONE_FILE = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/tbo/tbohotel_total_done.txt"
 
 def initialize_tracking_file(file_path, hotel_id_list):
     """Initializes the tracking file with all hotel IDs if it doesn't exist."""
@@ -114,6 +94,19 @@ def append_to_not_found_file(file_path, hotel_id):
     except Exception as e:
         print(f"Error writing to not found file: {e}")
 
+def append_to_total_done_file(file_path, hotel_id):
+    """Appends the hotel ID to the total done file."""
+    try:
+        with open(file_path, "a", encoding="utf-8") as file:
+            file.write(hotel_id + "\n")
+    except Exception as e:
+        print(f"Error writing to total done file: {e}")
+
+def save_json(base_path, hotel_id):
+    """Mock function to simulate saving JSON data."""
+    file_path = os.path.join(base_path, f"{hotel_id}.json")
+    with open(file_path, "w", encoding="utf-8") as file:
+        json.dump({"hotel_id": hotel_id, "status": "done"}, file, indent=4)
 
 def process_hotels():
     if not os.path.exists(HOTEL_ID_LIST):
@@ -130,8 +123,6 @@ def process_hotels():
         print("No hotel IDs left to process.")
         return
 
-
-
     supplier = "tbo"
     base_path = f"D:/content_for_hotel_json/cdn_row_collection/{supplier}"
 
@@ -139,6 +130,7 @@ def process_hotels():
         try:
             print(f"Processing hotel ID: {hotel_id}")
             save_json(base_path, hotel_id)
+            append_to_total_done_file(TOTAL_DONE_FILE, hotel_id)  
         except Exception as e:
             print(f"Error processing hotel ID {hotel_id}: {e}")
             append_to_not_found_file(NOT_FOUND_FILE, hotel_id)
@@ -151,6 +143,3 @@ def process_hotels():
 
 # Run the function
 process_hotels()
-
-
-
