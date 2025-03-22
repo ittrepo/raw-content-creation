@@ -10,7 +10,6 @@ import xmltodict
 load_dotenv()
 
 # Constants
-TBO_AUTHENTICATION = os.getenv("TBO_AUTHENTICATION")
 HOTEL_ID_LIST = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/agoda/agoda_hotel_id_list.txt"
 TRACKING_FILE = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/agoda/agoda_tracking_file.txt"
 SUCCESS_FILE = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/agoda/successful_done_hotel_id_list.txt"
@@ -43,9 +42,6 @@ def get_supplier_own_raw_data(hotel_id):
     
 
 def save_json(raw_path, hotel_id):
-    """
-    Save hotel data as a JSON file.
-    """
     json_file_path = os.path.join(raw_path, f"{hotel_id}.json")
     data = get_supplier_own_raw_data(hotel_id)
     
