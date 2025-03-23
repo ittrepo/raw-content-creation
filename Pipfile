@@ -6,11 +6,11 @@ name = "pypi"
 [packages]
 pandas = "*"
 openpyxl = "*"
-notebook = "*"
 sqlalchemy = "*"
 pymysql = "*"
 python-dotenv = "*"
 xmltodict = "*"
+notebook = "*"
 
 [dev-packages]
 
