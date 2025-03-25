@@ -33,29 +33,28 @@ def fetch_hotel_data():
     """Fetch all hotel data from database"""
     query = text("""
         SELECT DISTINCT
-            `address` AS address,
-            `amenity_groups` AS amenity_groups,
-            `check_in_time` AS check_in_time,
-            `check_out_time` AS check_out_time,
-            `description_struct` AS description_struct,
             `id` AS hotel_code,
-            `hid` AS hid,
-            `images` AS images,
-            `images_ext` AS images_ext,
-            `kind` AS kind,
-            `latitude` AS latitude,
-            `longitude` AS longitude,
-            `name` AS name,
-            `phone` AS phone,
-            `postal_code` AS postal_code,
-            `region` AS region,
-            `star_rating` AS star_rating,
-            `email` AS email,
-            `serp_filters` AS serp_filters,
-            `hotel_chain` AS hotel_chain
+            `address`,
+            `amenity_groups`,
+            `check_in_time`,
+            `check_out_time`,
+            `description_struct`,
+            `images`,
+            `images_ext`,
+            `kind`,
+            `latitude`,
+            `longitude`,
+            `name`,
+            `phone`,
+            `postal_code`,
+            `region`,
+            `star_rating`,
+            `email`,
+            `serp_filters`,
+            `hotel_chain`
         FROM ratehawk_2
+        WHERE `id` IS NOT NULL  # Skip entries with missing hid
     """)
-    
     try:
         with engine.connect() as conn:
             result = conn.execute(query)
@@ -71,17 +70,20 @@ def convert_all_fields_to_string(hotel_data):
     return hotel_data
 
 def save_hotel_json(hotel_data):
-    """Save individual hotel data to JSON file with all fields as strings"""
     try:
-        # Convert all hotel data fields to strings
-        hotel_data = convert_all_fields_to_string(hotel_data)
+        hotel_code = str(hotel_data.get('hotel_code', '')).strip()
         
-        # Use 'hotel_code' as the file name if available; fallback to 'unknown'
-        hotel_code = hotel_data.get('hotel_code', 'unknown')
+        # Validate hotel_code
+        if not hotel_code or hotel_code.lower() in ('none', 'null', 'undefined', ''):
+            print(f"Skipping invalid hotel_code: {hotel_code}")
+            return False
+
+        # Convert all fields to strings
+        hotel_data = {k: str(v) if v is not None else "" for k, v in hotel_data.items()}
+
         filename = f"{hotel_code}.json"
         filepath = os.path.join(BASE_OUTPUT_DIR, filename)
-        
-        # Create JSON structure
+
         json_output = {
             "metadata": {
                 "hotel_id": hotel_code,
@@ -90,25 +92,27 @@ def save_hotel_json(hotel_data):
             },
             "hotel_info": hotel_data
         }
-        
+
         with open(filepath, 'w', encoding='utf-8') as f:
             json.dump(json_output, f, indent=2, ensure_ascii=False)
-            
+
         return True
     except Exception as e:
-        print(f"Error processing hotel data: {e}")
+        print(f"Error saving {hotel_code}: {str(e)}")
         return False
 
 def update_tracking(hotel_code):
-    """Update tracking file with processed hotel codes"""
+    hotel_code = str(hotel_code).strip()
+    if not hotel_code or hotel_code.lower() in ('none', 'null', ''):
+        return False
     try:
         with open(TRACKING_FILE, 'a') as f:
             f.write(f"{hotel_code}\n")
         return True
     except Exception as e:
-        print(f"Tracking update failed: {e}")
+        print(f"Tracking failed for {hotel_code}: {e}")
         return False
-
+    
 def process_hotels():
     """Main processing function"""
     # Check existing processed hotels
