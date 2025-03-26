@@ -3,15 +3,23 @@ from html import unescape
 import json
 import re
 
-def fix_unclosed_cdata(xml_str):
-    """If there are more <![CDATA[ occurrences than ]]>,
-    append the missing closing tags at the end."""
-    open_count = xml_str.count("<![CDATA[")
-    close_count = xml_str.count("]]>")
-    if open_count > close_count:
-        # Append missing closing tags (this is a hack and should be verified for your data)
-        diff = open_count - close_count
-        xml_str += "]]>" * diff
+def fix_truncated_xml(xml_str):
+    """
+    Heuristic to append missing closing tags if the XML appears truncated.
+    This is a hack and assumes a specific structure.
+    """
+    # If there's an open <Description><![CDATA[ without its closing sequence, fix it:
+    if "<Description><![CDATA[" in xml_str and "]]></Description>" not in xml_str:
+        xml_str += "]]></Description>"
+    
+    # Ensure the Main element is closed
+    if "</Main>" not in xml_str:
+        xml_str += "</Main>"
+    
+    # Ensure the Root element is closed
+    if "</Root>" not in xml_str:
+        xml_str += "</Root>"
+    
     return xml_str
 
 # Sample response (replace with actual response.text)
@@ -19,7 +27,7 @@ response_text = '''<?xml version="1.0" encoding="utf-8"?>
 <soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
     <soap:Body>
         <MakeRequestResponse xmlns="http://www.goglobal.travel/">
-            <MakeRequestResult>&lt;Root&gt;&lt;Header&gt;&lt;Agency&gt;149548&lt;/Agency&gt;&lt;User&gt;NOFSHONXMLTEST&lt;/User&gt;&lt;Password&gt;&lt;/Password&gt;&lt;Operation&gt;HOTEL_INFO_RESPONSE&lt;/Operation&gt;&lt;OperationType&gt;Response&lt;/OperationType&gt;&lt;/Header&gt;&lt;Main&gt;&lt;HotelSearchCode&gt;&lt;![CDATA[]]&gt;&lt;/HotelSearchCode&gt;&lt;HotelName&gt;&lt;![CDATA[DoubleTree by Hilton Harrogate Majestic Hotel &amp; Spa]]&gt;&lt;/HotelName&gt;&lt;HotelId&gt;&lt;![CDATA[3133]]&gt;&lt;/HotelId&gt;&lt;Address&gt;&lt;![CDATA[Ripon Road, HG1 2HU, Harrogate, UNITED KINGDOM]]&gt;&lt;/Address&gt;&lt;CityCode&gt;&lt;![CDATA[779]]&gt;&lt;/CityCode&gt;&lt;Phone&gt;&lt;![CDATA[]]&gt;&lt;/Phone&gt;&lt;Fax&gt;&lt;![CDATA[]]&gt;&lt;/Fax&gt;&lt;Category&gt;&lt;![CDATA[4]]&gt;&lt;/Category&gt;&lt;Description&gt;&lt;![CDATA[Set in gardens...<BR />...]]&gt;&lt;/Description&gt;&lt;HotelFacilities&gt;&lt;![CDATA[Parking<BR />Restaurant...]]&gt;&lt;/HotelFacilities&gt;&lt;RoomFacilities&gt;&lt;![CDATA[&lt;b&gt;Room Type: Double &lt;/b&gt;<BR />Tea/Coffee maker...]]&gt;&lt;/RoomFacilities&gt;&lt;Pictures&gt;&lt;Picture Description="Primary image"&gt;&lt;![CDATA[https://i.travelapi.com/...]]&gt;&lt;/Picture&gt;&lt;/Pictures&gt;&lt;/Main&gt;&lt;/Root&gt;</MakeRequestResult>
+            <MakeRequestResult>&lt;Root&gt;&lt;Header&gt;&lt;Agency&gt;149548&lt;/Agency&gt;&lt;User&gt;NOFSHONXMLTEST&lt;/User&gt;&lt;Password&gt;&lt;/Password&gt;&lt;Operation&gt;HOTEL_INFO_RESPONSE&lt;/Operation&gt;&lt;OperationType&gt;Response&lt;/OperationType&gt;&lt;/Header&gt;&lt;Main&gt;&lt;HotelSearchCode&gt;&lt;![CDATA[]]&gt;&lt;/HotelSearchCode&gt;&lt;HotelName&gt;&lt;![CDATA[DoubleTree by Hilton Harrogate Majestic Hotel &amp; Spa]]&gt;&lt;/HotelName&gt;&lt;HotelId&gt;&lt;![CDATA[3133]]&gt;&lt;/HotelId&gt;&lt;Address&gt;&lt;![CDATA[Ripon Road, HG1 2HU, Harrogate, UNITED KINGDOM]]&gt;&lt;/Address&gt;&lt;CityCode&gt;&lt;![CDATA[779]]&gt;&lt;/CityCode&gt;&lt;Phone&gt;&lt;![CDATA[]]&gt;&lt;/Phone&gt;&lt;Fax&gt;&lt;![CDATA[]]&gt;&lt;/Fax&gt;&lt;Category&gt;&lt;![CDATA[4]]&gt;&lt;/Category&gt;&lt;Description&gt;&lt;![CDATA[Set in gardens...<BR />...]]&gt;</MakeRequestResult>
         </MakeRequestResponse>
     </soap:Body>
 </soap:Envelope>'''
@@ -35,19 +43,20 @@ make_request_result = soap_root.find('.//soap:Body/ns:MakeRequestResponse/ns:Mak
 # Unescape HTML entities to get the inner XML
 unescaped_xml = unescape(make_request_result)
 
-# Debug: Print the unescaped XML
-print("Unescaped XML:")
+print("Unescaped XML before fix:")
 print(unescaped_xml)
 
-# Fix unclosed CDATA sections if any
-unescaped_xml = fix_unclosed_cdata(unescaped_xml)
+# Attempt to fix the truncated XML
+fixed_xml = fix_truncated_xml(unescaped_xml)
+print("\nFixed XML:")
+print(fixed_xml)
 
-# Parse the inner XML safely
+# Parse the (hopefully fixed) inner XML
 try:
-    inner_root = ET.fromstring(unescaped_xml)
+    inner_root = ET.fromstring(fixed_xml)
 except ET.ParseError as e:
     print(f"XML Parse Error: {e}")
-    print("The inner XML appears to be malformed. Please check for mismatched or missing tags.")
+    print("The inner XML still appears to be malformed. Please check the source.")
     exit(1)
 
 # Function to safely get element text (returns an empty string if missing)
@@ -112,4 +121,5 @@ if pictures_element is not None:
 
 # Convert the result dictionary to JSON and print it
 json_output = json.dumps(result, indent=2, ensure_ascii=False)
+print("\nJSON Output:")
 print(json_output)
