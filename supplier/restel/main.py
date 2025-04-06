@@ -27,9 +27,7 @@ def get_supplier_own_raw_data(hotel_id):
     Fetch raw data from the supplier's API using hotel ID.
     but the function is not implemented.
     """
-    agency = os.getenv('GOGLOBAL_AGENCY')
-    user = os.getenv('GOGLOBAL_USER')
-    password = os.getenv('GOGLOBAL_PASSWORD')
+ 
     url = "https://gtr.xml.goglobal.travel/xmlwebservice.asmx"
     return None
     
