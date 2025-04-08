@@ -25,8 +25,8 @@ def split_file(input_file, output_prefix, lines_per_file):
 
 
 
-input_file = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/restel/restel_tracking_file.txt"
+input_file = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/ean/ean_tracking_file.txt"
 output_prefix = "text"
-lines_per_file = 28000
+lines_per_file = 20000
 
 split_file(input_file, output_prefix, lines_per_file)
