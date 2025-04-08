@@ -11,6 +11,7 @@ pymysql = "*"
 python-dotenv = "*"
 xmltodict = "*"
 notebook = "*"
+lxml = "*"
 
 [dev-packages]
 
