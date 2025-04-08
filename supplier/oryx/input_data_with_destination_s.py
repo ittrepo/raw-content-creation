@@ -39,18 +39,18 @@ headers = {
 
 # Read city names from the file with proper encoding
 try:
-    with open('get_all_city_name.txt', 'r', encoding='utf-8', errors='ignore') as f:
+    with open('get_all_city_name_s.txt', 'r', encoding='utf-8', errors='ignore') as f:
         cities = [line.strip() for line in f if line.strip()]
 except FileNotFoundError:
-    print("Error: The file 'get_all_city_name.txt' was not found.")
+    print("Error: The file 'get_all_city_name_s.txt' was not found.")
     exit()
 
 # Process each city
 for city in cities:
     payload = json.dumps({"destination": city})
     try:
-        response = requests.post(url, headers=headers, data=payload)
-        response.raise_for_status()  # Raises HTTPError for bad responses
+        response = requests.post(url, headers=headers, data=payload, timeout=10)
+        response.raise_for_status()
         response_json = response.json()
         
         if response_json.get('isSuccess', False):
