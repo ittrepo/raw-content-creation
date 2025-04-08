@@ -5,6 +5,9 @@ import time
 from dotenv import load_dotenv
 import xml.etree.ElementTree as ET
 import xmltodict
+import urllib.parse
+import requests
+
 
 # Load environment variables
 load_dotenv()
@@ -12,9 +15,9 @@ load_dotenv()
 # Constants
 HOTEL_ID_LIST = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/restel/restel_hotel_id_list.txt"
 TRACKING_FILE = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/restel/restel_tracking_file.txt"
-SUCCESS_FILE = ""
-NOT_FOUND_FILE =
-BASE_PATH =
+SUCCESS_FILE = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/restel/successful_done_hotel_id_list.txt"
+NOT_FOUND_FILE = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/restel/restel_not_found.txt"
+BASE_PATH = "D:/content_for_hotel_json/cdn_row_collection/restel"
 
 
 REQUEST_DELAY = 1
@@ -27,10 +30,37 @@ def get_supplier_own_raw_data(hotel_id):
     Fetch raw data from the supplier's API using hotel ID.
     but the function is not implemented.
     """
+
+    xml_data = f"""<?xml version="1.0" encoding="UTF-8"?>
+    <peticion>
+    <tipo>15</tipo>
+    <nombre>Servicio de información de hotel</nombre>
+    <agencia>Agencia prueba</agencia>
+    <parametros>
+        <codigo>{hotel_id}</codigo>
+        <idioma>1</idioma>
+    </parametros>
+    </peticion>"""
+
  
-    url = "https://gtr.xml.goglobal.travel/xmlwebservice.asmx"
-    return None
-    
+    encoded_xml = urllib.parse.quote(xml_data)
+    url = f"http://xml.hotelresb2b.com/xml/listen_xml.jsp?codigousu=ZVYE&clausu=xml514142&afiliacio=RS&secacc=151003&xml={encoded_xml}"
+
+    headers = {
+    'Cookie': 'JSESSIONID=aaaodjlEZaLhM_vAad2xz'
+    }
+
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        try:
+            data = xmltodict.parse(response.text)
+            return data
+        except Exception as e:
+            print(f"Error parsing XML for hotel ID {hotel_id}: {e}")
+            return None
+    else:
+        print(f"Failed to fetch data for hotel ID {hotel_id}. Status code: {response.status_code}, Response: {response.text}")
+
 
 def save_json(raw_path, hotel_id):
     json_file_path = os.path.join(raw_path, f"{hotel_id}.json")
