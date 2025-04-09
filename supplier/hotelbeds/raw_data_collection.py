@@ -8,6 +8,15 @@ import time
 load_dotenv()
 
 
+HOTEL_ID_LIST = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/hotelbeds//hotelbeds_hotel_id_list.txt"
+TRACKING_FILE = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/hotelbeds//hotelbeds_tracking_file.txt"
+SUCCESS_FILE = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/hotelbeds//hotelbeds_successful_done_hotel_id_list.txt"
+NOT_FOUND_FILE = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/hotelbeds//hotelbeds_not_found.txt"
+
+BASE_PATH = f"D:/content_for_hotel_json/cdn_row_collection/hotelbeds"
+REQUEST_DELAY = 1
+
+
 
 def get_supplier_own_raw_data(hotel_id):
     HOTELSTON_API_KEY = os.getenv("HOTELBEDS_API_KEY")
@@ -64,13 +73,6 @@ def save_json(raw_path, hotel_id):
 
 
 
-HOTEL_ID_LIST = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/hotelbeds//hotelbeds_hotel_id_list.txt"
-TRACKING_FILE = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/hotelbeds//hotelbeds_tracking_file.txt"
-SUCCESS_FILE = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/hotelbeds//hotelbeds_successful_done_hotel_id_list.txt"
-NOT_FOUND_FILE = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/hotelbeds//hotelbeds_not_found.txt"
-
-BASE_PATH = f"D:/content_for_hotel_json/cdn_row_collection/hotelbeds"
-REQUEST_DELAY = 1
 
 def initialize_tracking_file(file_path, hotel_id_list):
     """Initializes the tracking file with all hotel IDs if it doesn't exist."""
