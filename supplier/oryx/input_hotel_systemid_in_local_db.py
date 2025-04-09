@@ -17,7 +17,7 @@ class Hotel(Base):
     giDestinationId = Column(String(255))
     destinationId = Column(String(255))
     name = Column(String(255))
-    systemId = Column(String(255), unique=True)  # Ensure systemId is unique
+    systemId = Column(String(255), unique=True) 
     rating = Column(Integer)
     city = Column(String(255))
     address1 = Column(String(255))
@@ -38,7 +38,7 @@ def fetch_hotel_data(destination_id):
         'Content-Type': 'application/json',
         'ApiKey': 'MtG5lGOBy06CpnY43AoGsA=='
     }
-    response = requests.post(url, headers=headers, data=payload)
+    response = requests.post(url, headers=headers, data=payload, timeout=10)
 
     # Check if the response is successful
     if response.status_code == 200:
