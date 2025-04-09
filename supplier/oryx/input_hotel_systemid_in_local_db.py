@@ -109,6 +109,8 @@ def write_destination_ids(file_path, destination_ids):
 # Main processing loop
 file_path = 'get_all_destination_id.txt'
 
+import random
+
 while True:
     destination_ids = read_destination_ids(file_path)
 
@@ -116,7 +118,9 @@ while True:
         print("All destination IDs have been processed.")
         break
 
-    for destination_id in destination_ids[:]:  # Iterate over a copy of the list
+    random.shuffle(destination_ids)  # Shuffle the list to process randomly
+
+    for destination_id in destination_ids[:]:  # Iterate over a copy
         data = fetch_hotel_data(destination_id)
         if save_to_database(data, destination_id):
             destination_ids.remove(destination_id)
