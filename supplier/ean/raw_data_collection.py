@@ -8,7 +8,6 @@ import json
 load_dotenv()
 
 # Constants
-TBO_AUTHENTICATION = os.getenv("TBO_AUTHENTICATION")
 HOTEL_ID_LIST = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/ean/ean_hotel_id_list.txt"
 TRACKING_FILE = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/ean/ean_tracking_file.txt"
 SUCCESS_FILE = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/ean/successful_done_hotel_id_list.txt"

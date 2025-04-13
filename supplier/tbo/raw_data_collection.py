@@ -15,12 +15,12 @@ SUCCESS_FILE = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/tbo/
 NOT_FOUND_FILE = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/tbo/tbohotel_not_found.txt"
 BASE_PATH = "D:/content_for_hotel_json/cdn_row_collection/tbo"
 
-
-REQUEST_DELAY = 1
+REQUEST_DELAY = 1  
+MAX_RETRIES = 3
 
 def get_supplier_own_raw_data(hotel_id):
     """
-    Fetch hotel data from the TBO API.
+    Fetch hotel data from the TBO API, checking both HTTP and internal status codes.
     """
     url = "https://api.tbotechnology.in/TBOHolidays_HotelAPI/Hoteldetails"
     payload = {
@@ -34,34 +34,47 @@ def get_supplier_own_raw_data(hotel_id):
 
     try:
         response = requests.post(url, headers=headers, json=payload, timeout=10)
-        if response.status_code == 200:
-            return response.json()
+        response.raise_for_status()  # Raises HTTPError for 4xx/5xx responses
+        
+        data = response.json()
+        status_code = data.get('Status', {}).get('Code', -1)
+        
+        if status_code == 200:
+            return data
         else:
-            print(f"Failed to fetch data for hotel {hotel_id}. Status code: {response.status_code}")
+            error_desc = data.get('Status', {}).get('Description', 'No description provided')
+            print(f"API Error for hotel {hotel_id}: {error_desc} (Code: {status_code})")
             return None
+
+    except requests.exceptions.HTTPError as http_err:
+        print(f"HTTP error for hotel {hotel_id}: {http_err}")
+    except json.JSONDecodeError as json_err:
+        print(f"Failed to decode JSON for hotel {hotel_id}: {json_err}")
     except Exception as e:
-        print(f"Error fetching data for hotel {hotel_id}: {e}")
-        return None
+        print(f"General error fetching hotel {hotel_id}: {e}")
+    
+    return None
 
 def save_json(raw_path, hotel_id):
     """
-    Save hotel data as a JSON file.
+    Save hotel data only if valid. Returns True if successful.
     """
-    json_file_path = os.path.join(raw_path, f"{hotel_id}.json")
     data = get_supplier_own_raw_data(hotel_id)
-    
+    json_path = os.path.join(raw_path, f"{hotel_id}.json")
+
     if data is None:
-        print(f"Warning: {hotel_id}.json - Data fetch failed. Saving default empty JSON.")
-        data = {}
-    
+        print(f"Skipping save for {hotel_id} - no valid data.")
+        return False
+
     try:
-        with open(json_file_path, "w", encoding="utf-8") as file:
+        with open(json_path, "w", encoding="utf-8") as file:
             json.dump(data, file, indent=4)
-        print(f"{hotel_id}.json saved successfully at {json_file_path}")
+        print(f"Successfully saved {hotel_id}.json")
         return True
     except Exception as e:
-        print(f"Error saving JSON for hotel {hotel_id}: {e}")
+        print(f"Failed to save {hotel_id}.json: {e}")
         return False
+
 
 def initialize_tracking_file(file_path, hotel_id_list):
     """
@@ -125,7 +138,7 @@ def process_hotels():
         all_hotel_ids = [line.strip() for line in file if line.strip()]
 
     initialize_tracking_file(TRACKING_FILE, all_hotel_ids)
-    
+
     hotel_ids_to_process = read_tracking_file(TRACKING_FILE)
 
     if not hotel_ids_to_process:
@@ -136,14 +149,14 @@ def process_hotels():
         json_path = os.path.join(BASE_PATH, f"{hotel_id}.json")
         
         if os.path.exists(json_path):
-            print(f"Skipping {hotel_id} - JSON file already exists.")
+            print(f"Skipping {hotel_id} - JSON exists.")
             append_to_success_file(SUCCESS_FILE, hotel_id)
             hotel_ids_to_process.remove(hotel_id)
             write_tracking_file(TRACKING_FILE, hotel_ids_to_process)
             continue
 
         try:
-            print(f"Processing hotel ID: {hotel_id}")
+            print(f"Processing {hotel_id}")
             success = save_json(BASE_PATH, hotel_id)
             
             if success:
@@ -154,15 +167,13 @@ def process_hotels():
             hotel_ids_to_process.remove(hotel_id)
             
         except Exception as e:
-            print(f"Error processing hotel ID {hotel_id}: {e}")
-            continue
+            print(f"Critical error processing {hotel_id}: {e}")
+            continue  # Keep the ID in the tracking file for retry
 
         write_tracking_file(TRACKING_FILE, hotel_ids_to_process)
-
         time.sleep(REQUEST_DELAY)
 
     print("Processing completed.")
-
 # Run the function
 if __name__ == "__main__":
     process_hotels()
