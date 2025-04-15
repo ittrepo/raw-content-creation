@@ -21,7 +21,7 @@ engine = create_engine(connection_url)
 
 # Function to get all distinct city names and save to a text file
 def get_all_city():
-    query = text(f"SELECT DISTINCT `CityName` FROM {table}")
+    query = text(f"SELECT DISTINCT `CountryName` FROM {table}")
     with engine.connect() as conn:
         df = pd.read_sql(query, conn)
     
