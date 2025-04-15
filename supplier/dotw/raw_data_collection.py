@@ -3,6 +3,7 @@ import xml.etree.ElementTree as ET
 import json
 import os
 
+
 def xml_element_to_dict(element):
     """Convert XML element to nested dictionary with attributes"""
     result = element.attrib.copy()
@@ -20,12 +21,15 @@ def xml_element_to_dict(element):
 
     return result
 
+
 def process_city(city_code, output_dir):
+    """Process a single city code and return True if successful"""
     url = "https://www.xmldev.dotwconnect.com/gatewayV4.dotw"
     headers = {
         'Content-Type': 'application/xml',
         'Cookie': 'PHPSESSID=3e62394000d0589af852105f9d7cb26e'
     }
+    
     payload = f"""<customer>
                     <username>kam786</username>
                     <password>98aa96f33fd167e34910a1ee3727d2e9</password>
@@ -107,60 +111,66 @@ def process_city(city_code, output_dir):
                     </request>
                 </customer>
                 """
+    
+    try:
+        response = requests.post(url, headers=headers, data=payload)
 
-    response = requests.post(url, headers=headers, data=payload)
+        if response.status_code == 200:
+            try:
+                root = ET.fromstring(response.text)
+                hotels = root.findall('.//hotels/hotel')
 
-    if response.status_code == 200:
-        try:
-            root = ET.fromstring(response.text)
-            hotels = root.findall('.//hotels/hotel')
+                for hotel in hotels:
+                    hotel_id = hotel.attrib.get('hotelid')
+                    if not hotel_id:
+                        continue
 
-            for hotel in hotels:
-                hotel_id = hotel.attrib.get('hotelid')
-                if not hotel_id:
-                    continue
+                    # Convert entire hotel element to nested dictionary
+                    hotel_dict = xml_element_to_dict(hotel)
 
-                # Convert entire hotel element to nested dictionary
-                hotel_dict = xml_element_to_dict(hotel)
+                    # Add root element attributes
+                    hotel_dict['_root_attributes'] = root.attrib
 
-                # Add root element attributes
-                hotel_dict['_root_attributes'] = root.attrib
+                    # Save complete data
+                    filename = os.path.join(output_dir, f"{hotel_id}.json")
+                    with open(filename, 'w', encoding='utf-8') as f:
+                        json.dump(hotel_dict, f, indent=4, ensure_ascii=False)
 
-                # Save complete data
-                filename = os.path.join(output_dir, f"{hotel_id}.json")
-                with open(filename, 'w', encoding='utf-8') as f:
-                    json.dump(hotel_dict, f, indent=4, ensure_ascii=False)
+                    print(f"Saved complete data for hotel {hotel_id}")
 
-                print(f"Saved complete data for hotel {hotel_id}")
+                print(f"Processed {len(hotels)} hotels for city code {city_code}")
 
-            print(f"Processed {len(hotels)} hotels for city code {city_code}")
-
-        except ET.ParseError as e:
-            print(f"XML parsing error for city code {city_code}: {e}")
-    else:
-        print(f"Request failed with status code: {response.status_code} for city code {city_code}")
-        print(response.text)
+            except ET.ParseError as e:
+                print(f"XML parsing error for city code {city_code}: {e}")
+    except requests.exceptions.RequestException as e:
+        print(f"Request failed for city {city_code}: {str(e)}")
+        return False
+    
 
 def main():
     city_codes_file = "D:/Rokon/ofc_git/row_content_create/supplier/dotw/get_all_city_code.txt"
     base_path = "D:/content_for_hotel_json/cdn_row_collection/dotw"
-
-    # Create output directory if not exists
     os.makedirs(base_path, exist_ok=True)
 
-    # Read city codes from file
+    # Read and clean city codes
     with open(city_codes_file, 'r') as file:
-        city_codes = file.readlines()
+        original_codes = [line.strip() for line in file if line.strip()]
 
-    # Process each city code
-    for city_code in city_codes:
-        city_code = city_code.strip()
-        if city_code:
-            process_city(city_code, base_path)
+    remaining_codes = []
+    processed_count = 0
 
-    # Remove processed city codes from the list
+    for city_code in original_codes:
+        if process_city(city_code, base_path):
+            processed_count += 1
+        else:
+            remaining_codes.append(city_code)
+
+    # Update city code file with remaining codes
     with open(city_codes_file, 'w') as file:
-        file.writelines(city_codes)
+        file.write('\n'.join(remaining_codes))
+
+    print(f"\nProcessing complete! Successfully processed {processed_count} cities.")
+    print(f"{len(remaining_codes)} cities remaining in the list.")
 
 if __name__ == "__main__":
     main()
