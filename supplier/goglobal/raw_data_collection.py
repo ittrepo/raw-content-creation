@@ -4,6 +4,7 @@ import requests
 import time
 from dotenv import load_dotenv
 import xmltodict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Load environment variables
 load_dotenv()
@@ -16,6 +17,7 @@ NOT_FOUND_FILE = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/go
 BASE_PATH = "D:/content_for_hotel_json/cdn_row_collection/goglobal"
 
 REQUEST_DELAY = 1
+MAX_WORKERS = 10  # Number of concurrent threads
 
 def get_supplier_own_raw_data(hotel_id):
     agency = os.getenv('GOGLOBAL_AGENCY')
@@ -67,9 +69,8 @@ def get_supplier_own_raw_data(hotel_id):
         print(f"An error occurred during parsing: {e}")
     return None
 
-def save_json(raw_path, hotel_id):
+def save_json(raw_path, hotel_id, data):
     json_file_path = os.path.join(raw_path, f"{hotel_id}.json")
-    data = get_supplier_own_raw_data(hotel_id)
 
     if data is None:
         print(f"Warning: {hotel_id}.json - Data fetch failed. Saving default empty JSON.")
@@ -133,6 +134,29 @@ def append_to_not_found_file(file_path, hotel_id):
     except Exception as e:
         print(f"Error writing to not found file: {e}")
 
+def process_hotel(hotel_id):
+    json_path = os.path.join(BASE_PATH, f"{hotel_id}.json")
+
+    if os.path.exists(json_path):
+        print(f"Skipping {hotel_id} - JSON file already exists.")
+        append_to_success_file(SUCCESS_FILE, hotel_id)
+        return hotel_id, True
+
+    try:
+        print(f"Processing hotel ID: {hotel_id}")
+        data = get_supplier_own_raw_data(hotel_id)
+        success = save_json(BASE_PATH, hotel_id, data)
+
+        if success:
+            append_to_success_file(SUCCESS_FILE, hotel_id)
+        else:
+            append_to_not_found_file(NOT_FOUND_FILE, hotel_id)
+
+        return hotel_id, success
+    except Exception as e:
+        print(f"Error processing hotel ID {hotel_id}: {e}")
+        return hotel_id, False
+
 def process_hotels():
     if not os.path.exists(BASE_PATH):
         os.makedirs(BASE_PATH)
@@ -153,31 +177,14 @@ def process_hotels():
         print("No hotel IDs left to process.")
         return
 
-    while hotel_ids_to_process:
-        hotel_id = hotel_ids_to_process.pop(0)  # Process the first hotel ID in the list
-        json_path = os.path.join(BASE_PATH, f"{hotel_id}.json")
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        future_to_hotel = {executor.submit(process_hotel, hotel_id): hotel_id for hotel_id in hotel_ids_to_process}
 
-        if os.path.exists(json_path):
-            print(f"Skipping {hotel_id} - JSON file already exists.")
-            append_to_success_file(SUCCESS_FILE, hotel_id)
+        for future in as_completed(future_to_hotel):
+            hotel_id, success = future.result()
+            hotel_ids_to_process.remove(hotel_id)
             write_tracking_file(TRACKING_FILE, hotel_ids_to_process)
-            continue
-
-        try:
-            print(f"Processing hotel ID: {hotel_id}")
-            success = save_json(BASE_PATH, hotel_id)
-
-            if success:
-                append_to_success_file(SUCCESS_FILE, hotel_id)
-            else:
-                append_to_not_found_file(NOT_FOUND_FILE, hotel_id)
-
-        except Exception as e:
-            print(f"Error processing hotel ID {hotel_id}: {e}")
-
-        write_tracking_file(TRACKING_FILE, hotel_ids_to_process)
-
-        time.sleep(REQUEST_DELAY)
+            time.sleep(REQUEST_DELAY)
 
     print("Processing completed.")
 

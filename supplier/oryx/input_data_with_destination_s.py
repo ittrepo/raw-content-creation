@@ -2,10 +2,15 @@ import requests
 import json
 from sqlalchemy import create_engine, text
 import pandas as pd
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Database configuration
 DATABASE_URL = "mysql+pymysql://root:@localhost/csvdata01_02102024"
 engine = create_engine(DATABASE_URL)
+
+# Constants
+CITY_FILE_PATH = 'get_all_city_name.txt'
+MAX_WORKERS = 20  # Number of concurrent threads
 
 def create_table():
     create_table_sql = """
@@ -94,7 +99,7 @@ def process_city(city, existing_ids, url, headers):
 def main():
     create_table()
     existing_ids = fetch_existing_ids()
-    cities = read_cities('get_all_city_name.txt')
+    cities = read_cities(CITY_FILE_PATH)
 
     url = "http://uat-apiv2.giinfotech.ae/api/v2/hotel/destination-info"
     headers = {
@@ -105,12 +110,19 @@ def main():
     total_processed = 0
     total_skipped = 0
 
-    for city in cities[:]:  # Use a slice to iterate over a copy of the list
-        processed, skipped = process_city(city, existing_ids, url, headers)
-        total_processed += processed
-        total_skipped += skipped
-        cities.remove(city)  # Remove the city from the list immediately after processing
-        write_cities('get_all_city_name.txt', cities)  # Write the remaining cities back to the file
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        future_to_city = {executor.submit(process_city, city, existing_ids, url, headers): city for city in cities}
+
+        for future in as_completed(future_to_city):
+            city = future_to_city[future]
+            try:
+                processed, skipped = future.result()
+                total_processed += processed
+                total_skipped += skipped
+                cities.remove(city)  # Remove the city from the list immediately after processing
+                write_cities(CITY_FILE_PATH, cities)  # Write the remaining cities back to the file
+            except Exception as e:
+                print(f"Error processing city {city}: {e}")
 
     print(f"Processing complete. Added {total_processed} new records. Skipped {total_skipped} existing records.")
 

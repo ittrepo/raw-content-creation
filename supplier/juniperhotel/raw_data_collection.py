@@ -1,11 +1,10 @@
 import os
 import time
-import hashlib
 import requests
 from dotenv import load_dotenv
 import json
-import xml.etree.ElementTree as ET
 import xmltodict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 load_dotenv()
 
@@ -16,8 +15,8 @@ SUCCESS_FILE = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/juni
 NOT_FOUND_FILE = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/juniper/juniper_not_found.txt"
 BASE_PATH = "D:/content_for_hotel_json/cdn_row_collection/juniper"
 
-
 REQUEST_DELAY = 1
+MAX_WORKERS = 10  # Number of concurrent threads
 
 def get_supplier_own_raw_data(hotel_id):
     JUNIPER_USER = os.getenv("JUNIPER_USER")
@@ -63,10 +62,8 @@ def get_supplier_own_raw_data(hotel_id):
         print(f"Request error for hotel ID {hotel_id}: {e}")
         return None
 
-
-def save_json(raw_path, hotel_id):
+def save_json(raw_path, hotel_id, data):
     json_file_path = os.path.join(raw_path, f"{hotel_id}.json")
-    data = get_supplier_own_raw_data(hotel_id)
 
     if data is None:
         print(f"Warning: {hotel_id}.json - Data fetch failed. Saving default empty JSON.")
@@ -80,7 +77,6 @@ def save_json(raw_path, hotel_id):
     except Exception as e:
         print(f"Error saving JSON for hotel {hotel_id}: {e}")
         return False
-    
 
 def initialize_tracking_file(file_path, hotel_id_list):
     """
@@ -131,6 +127,29 @@ def append_to_not_found_file(file_path, hotel_id):
     except Exception as e:
         print(f"Error writing to not found file: {e}")
 
+def process_hotel(hotel_id):
+    json_path = os.path.join(BASE_PATH, f"{hotel_id}.json")
+
+    if os.path.exists(json_path):
+        print(f"Skipping {hotel_id} - JSON file already exists.")
+        append_to_success_file(SUCCESS_FILE, hotel_id)
+        return hotel_id, True
+
+    try:
+        print(f"Processing hotel ID: {hotel_id}")
+        data = get_supplier_own_raw_data(hotel_id)
+        success = save_json(BASE_PATH, hotel_id, data)
+
+        if success:
+            append_to_success_file(SUCCESS_FILE, hotel_id)
+        else:
+            append_to_not_found_file(NOT_FOUND_FILE, hotel_id)
+
+        return hotel_id, success
+    except Exception as e:
+        print(f"Error processing hotel ID {hotel_id}: {e}")
+        return hotel_id, False
+
 def process_hotels():
     if not os.path.exists(BASE_PATH):
         os.makedirs(BASE_PATH)
@@ -144,41 +163,21 @@ def process_hotels():
         all_hotel_ids = [line.strip() for line in file if line.strip()]
 
     initialize_tracking_file(TRACKING_FILE, all_hotel_ids)
-    
+
     hotel_ids_to_process = read_tracking_file(TRACKING_FILE)
 
     if not hotel_ids_to_process:
         print("No hotel IDs left to process.")
         return
 
-    for hotel_id in hotel_ids_to_process.copy(): 
-        json_path = os.path.join(BASE_PATH, f"{hotel_id}.json")
-        
-        if os.path.exists(json_path):
-            print(f"Skipping {hotel_id} - JSON file already exists.")
-            append_to_success_file(SUCCESS_FILE, hotel_id)
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        future_to_hotel = {executor.submit(process_hotel, hotel_id): hotel_id for hotel_id in hotel_ids_to_process}
+
+        for future in as_completed(future_to_hotel):
+            hotel_id, success = future.result()
             hotel_ids_to_process.remove(hotel_id)
             write_tracking_file(TRACKING_FILE, hotel_ids_to_process)
-            continue
-
-        try:
-            print(f"Processing hotel ID: {hotel_id}")
-            success = save_json(BASE_PATH, hotel_id)
-            
-            if success:
-                append_to_success_file(SUCCESS_FILE, hotel_id)
-            else:
-                append_to_not_found_file(NOT_FOUND_FILE, hotel_id)
-
-            hotel_ids_to_process.remove(hotel_id)
-            
-        except Exception as e:
-            print(f"Error processing hotel ID {hotel_id}: {e}")
-            continue
-
-        write_tracking_file(TRACKING_FILE, hotel_ids_to_process)
-
-        time.sleep(REQUEST_DELAY)
+            time.sleep(REQUEST_DELAY)
 
     print("Processing completed.")
 
