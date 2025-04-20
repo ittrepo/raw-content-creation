@@ -30,6 +30,17 @@ except Exception as e:
     print("Please check the SQL syntax and ensure the database is accessible.")
     exit()
 
+# Fetch existing destinationIds to avoid duplicates
+existing_ids = set()
+try:
+    with engine.connect() as connection:
+        query = text("SELECT destinationId FROM oryx_destination_id")
+        result = connection.execute(query)
+        existing_ids = {row[0] for row in result}
+    print(f"Found {len(existing_ids)} existing destination IDs in the database")
+except Exception as e:
+    print(f"Error fetching existing IDs: {e}")
+
 # API configuration
 url = "http://uat-apiv2.giinfotech.ae/api/v2/hotel/destination-info"
 headers = {
@@ -39,13 +50,16 @@ headers = {
 
 # Read city names from the file with proper encoding
 try:
-    with open('get_all_city_name_s.txt', 'r', encoding='utf-8', errors='ignore') as f:
+    with open('get_all_city_name.txt', 'r', encoding='utf-8', errors='ignore') as f:
         cities = [line.strip() for line in f if line.strip()]
 except FileNotFoundError:
-    print("Error: The file 'get_all_city_name_s.txt' was not found.")
+    print("Error: The file 'get_all_city_name.txt' was not found.")
     exit()
 
 # Process each city
+total_processed = 0
+total_skipped = 0
+
 for city in cities:
     payload = json.dumps({"destination": city})
     try:
@@ -56,9 +70,23 @@ for city in cities:
         if response_json.get('isSuccess', False):
             data = response_json.get('data', [])
             if data:
-                df = pd.DataFrame(data)
-                df.to_sql('oryx_destination_id', con=engine, if_exists='append', index=False)
-                print(f"Successfully inserted {len(data)} records for city: {city}")
+                # Filter out records that already exist in the database
+                new_records = []
+                for record in data:
+                    if record.get('destinationId') not in existing_ids:
+                        new_records.append(record)
+                        # Add to our set to avoid duplicates in subsequent API calls
+                        existing_ids.add(record.get('destinationId'))
+                
+                if new_records:
+                    df = pd.DataFrame(new_records)
+                    df.to_sql('oryx_destination_id', con=engine, if_exists='append', index=False)
+                    print(f"Successfully inserted {len(new_records)} new records for city: {city}")
+                    total_processed += len(new_records)
+                    total_skipped += (len(data) - len(new_records))
+                else:
+                    print(f"All {len(data)} records for city {city} already exist in database, skipping.")
+                    total_skipped += len(data)
             else:
                 print(f"No data found for city: {city}")
         else:
@@ -70,4 +98,4 @@ for city in cities:
     except Exception as e:
         print(f"An unexpected error occurred for city {city}: {e}")
 
-print("Processing complete.")
+print(f"Processing complete. Added {total_processed} new records. Skipped {total_skipped} existing records.")
