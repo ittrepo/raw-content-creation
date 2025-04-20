@@ -3,7 +3,6 @@ import json
 import requests
 import time
 from dotenv import load_dotenv
-import xml.etree.ElementTree as ET
 import xmltodict
 
 # Load environment variables
@@ -16,9 +15,7 @@ SUCCESS_FILE = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/gogl
 NOT_FOUND_FILE = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/goglobal/goglobal_hotel_not_found.txt"
 BASE_PATH = "D:/content_for_hotel_json/cdn_row_collection/goglobal"
 
-
 REQUEST_DELAY = 1
-
 
 def get_supplier_own_raw_data(hotel_id):
     agency = os.getenv('GOGLOBAL_AGENCY')
@@ -27,8 +24,8 @@ def get_supplier_own_raw_data(hotel_id):
     url = "https://gtr.xml.goglobal.travel/xmlwebservice.asmx"
 
     payload = f"""<?xml version="1.0" encoding="utf-8"?>
-            <soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-                        xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+            <soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                        xmlns:xsd="http://www.w3.org/2001/XMLSchema"
                         xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
                 <soap12:Body>
                     <MakeRequest xmlns="http://www.goglobal.travel/">
@@ -54,34 +51,30 @@ def get_supplier_own_raw_data(hotel_id):
                 </soap12:Body>
             </soap12:Envelope>"""
 
-
     headers = {
             'Content-Type': 'application/soap+xml; charset=utf-8',
             'API-Operation': 'HOTEL_INFO_REQUEST'
             }
 
-
     try:
         response = requests.post(url, data=payload, headers=headers)
-        response.raise_for_status() 
+        response.raise_for_status()
         parsed_response = xmltodict.parse(response.text)
-        return parsed_response       
+        return parsed_response
     except requests.exceptions.RequestException as e:
         print(f"An error occurred: {e}")
     except Exception as e:
         print(f"An error occurred during parsing: {e}")
-
-
-    
+    return None
 
 def save_json(raw_path, hotel_id):
     json_file_path = os.path.join(raw_path, f"{hotel_id}.json")
     data = get_supplier_own_raw_data(hotel_id)
-    
+
     if data is None:
         print(f"Warning: {hotel_id}.json - Data fetch failed. Saving default empty JSON.")
         data = {}
-    
+
     try:
         with open(json_file_path, "w", encoding="utf-8") as file:
             json.dump(data, file, indent=2)
@@ -90,7 +83,6 @@ def save_json(raw_path, hotel_id):
     except Exception as e:
         print(f"Error saving JSON for hotel {hotel_id}: {e}")
         return False
-
 
 def initialize_tracking_file(file_path, hotel_id_list):
     """
@@ -154,37 +146,34 @@ def process_hotels():
         all_hotel_ids = [line.strip() for line in file if line.strip()]
 
     initialize_tracking_file(TRACKING_FILE, all_hotel_ids)
-    
+
     hotel_ids_to_process = read_tracking_file(TRACKING_FILE)
 
     if not hotel_ids_to_process:
         print("No hotel IDs left to process.")
         return
 
-    for hotel_id in hotel_ids_to_process.copy(): 
+    while hotel_ids_to_process:
+        hotel_id = hotel_ids_to_process.pop(0)  # Process the first hotel ID in the list
         json_path = os.path.join(BASE_PATH, f"{hotel_id}.json")
-        
+
         if os.path.exists(json_path):
             print(f"Skipping {hotel_id} - JSON file already exists.")
             append_to_success_file(SUCCESS_FILE, hotel_id)
-            hotel_ids_to_process.remove(hotel_id)
             write_tracking_file(TRACKING_FILE, hotel_ids_to_process)
             continue
 
         try:
             print(f"Processing hotel ID: {hotel_id}")
             success = save_json(BASE_PATH, hotel_id)
-            
+
             if success:
                 append_to_success_file(SUCCESS_FILE, hotel_id)
             else:
                 append_to_not_found_file(NOT_FOUND_FILE, hotel_id)
 
-            hotel_ids_to_process.remove(hotel_id)
-            
         except Exception as e:
             print(f"Error processing hotel ID {hotel_id}: {e}")
-            continue
 
         write_tracking_file(TRACKING_FILE, hotel_ids_to_process)
 
