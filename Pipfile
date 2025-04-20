@@ -12,6 +12,7 @@ python-dotenv = "*"
 xmltodict = "*"
 notebook = "*"
 lxml = "*"
+boto3 = "*"
 
 [dev-packages]
 
