@@ -206,7 +206,6 @@ def extract_provider_hotel_ids():
     # Fetch records from the database
     query = select(global_hotel_mapping.c.CityName, global_hotel_mapping.c.CountryName, global_hotel_mapping.c.contentUpdateStatus).where(
         or_(
-            global_hotel_mapping.c.contentUpdateStatus != 'OK',
             global_hotel_mapping.c.contentUpdateStatus == None
         )
     )
@@ -227,7 +226,7 @@ def extract_provider_hotel_ids():
     directory = r"D:\content_for_hotel_json\HotelInfo\dnata"
 
     # Use ThreadPoolExecutor to process cities concurrently
-    with ThreadPoolExecutor(max_workers=10) as executor:
+    with ThreadPoolExecutor(max_workers=20) as executor:
         future_to_city = {executor.submit(process_city, row[0], row[1], session_id, conversation_id, directory): (row[0], row[1]) for row in result}
 
         for future in as_completed(future_to_city):

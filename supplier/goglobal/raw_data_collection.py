@@ -17,7 +17,7 @@ NOT_FOUND_FILE = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/go
 BASE_PATH = "D:/content_for_hotel_json/cdn_row_collection/goglobal"
 
 REQUEST_DELAY = 1
-MAX_WORKERS = 10  # Number of concurrent threads
+MAX_WORKERS = 20  # Number of concurrent threads
 
 def get_supplier_own_raw_data(hotel_id):
     agency = os.getenv('GOGLOBAL_AGENCY')
@@ -143,7 +143,7 @@ def process_hotel(hotel_id):
         return hotel_id, True
 
     try:
-        print(f"Processing hotel ID: {hotel_id}")
+        print(f"✅✅✅Processing hotel ID: {hotel_id}✅✅✅")
         data = get_supplier_own_raw_data(hotel_id)
         success = save_json(BASE_PATH, hotel_id, data)
 
