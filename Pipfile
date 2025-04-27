@@ -13,6 +13,10 @@ xmltodict = "*"
 notebook = "*"
 lxml = "*"
 boto3 = "*"
+paramiko = "*"
+scikit-learn = "*"
+geopy = "*"
+faiss-cpu = "*"
 
 [dev-packages]
 
