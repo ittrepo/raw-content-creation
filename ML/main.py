@@ -11,7 +11,6 @@ from sklearn.decomposition import TruncatedSVD
 from scipy.sparse import hstack
 from dotenv import load_dotenv
 
-# Load environment variables from a .env file
 load_dotenv()
 
 # Get database credentials from environment variables
@@ -27,7 +26,7 @@ DATABASE_URI = f'mysql+pymysql://{db_user}:{db_password}@{db_host}/{db_name}'
 engine = create_engine(DATABASE_URI)
 
 # Load the JSON file
-json_path = r'D:\content_for_hotel_json\HotelInfo\dnata\95210.json'
+json_path = r'D:\content_for_hotel_json\HotelInfo\dnata\935865.json'
 with open(json_path, 'r') as file:
     hotel_data = json.load(file)
 
@@ -65,7 +64,7 @@ X = X.astype('float32')
 
 # Build the Faiss index with approximate search
 dimension = X.shape[1]
-index = faiss.IndexHNSWFlat(dimension, 16)  # Use HNSW for approximate search
+index = faiss.IndexHNSWFlat(dimension, 16) 
 index.add(X)
 
 # Function to predict ID
@@ -94,7 +93,7 @@ input_data = {
     'latitude': float(hotel_data['latitude']),
     'longitude': float(hotel_data['longitude']),
     'address1': hotel_data['address'],
-    'address2': hotel_data['address2'] if hotel_data.get('address2') else "",  # Use address2 if available
+    'address2': hotel_data['address2'] if hotel_data.get('address2') else "",  
     'city': hotel_data['city']
 }
 
