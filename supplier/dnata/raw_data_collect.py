@@ -26,20 +26,14 @@ engine = create_engine(
     connect_args={"connect_timeout": 30}
 )
 
-# Reflect the database metadata and get the table
 metadata = MetaData()
 metadata.reflect(bind=engine)
 
-# Print available tables
-# print("Available tables:", metadata.tables.keys())
 
 # Check if the table exists
 if 'country_info' in metadata.tables:
     global_hotel_mapping = Table("country_info", metadata, autoload_with=engine)
-    # Print column names
-    # print("Columns in country_info table:", global_hotel_mapping.columns.keys())
 else:
-    # print("Table 'country_info' does not exist.")
     exit()
 
 # Create a scoped session for thread-safe operations
