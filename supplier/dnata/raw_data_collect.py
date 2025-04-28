@@ -47,11 +47,15 @@ session_factory = sessionmaker(bind=engine)
 Session = scoped_session(session_factory)
 
 def get_user_auth():
+    # Authenticate the user and get the session ID
+    user_name = os.getenv('DNATA_USERNAME')
+    password = os.getenv('DNATA_PASSWORD')
+    company_code = os.getenv('DNATA_COMPANYCODE')
     url = "https://gmtmsuat.provesio.com//api/v1/auth/login"
     payload = json.dumps({
-        "userName": "demo@gm.ae",
-        "password": "Varank@2710",
-        "companyCode": "CE000017"
+        "userName": user_name,
+        "password": password,
+        "companyCode": company_code
     })
     headers = {
         'Content-Type': 'application/json',
@@ -69,7 +73,7 @@ def get_hotel_id(session_id, conversation_id, country, city):
     payload = json.dumps({
         "country": country,
         "city": city,
-        "checkIn": "2025-06-11",
+        "checkIn": "2025-06-15",
         "checkOut": "2025-06-30",
         "rooms": [
             {
@@ -139,7 +143,7 @@ def process_city(city_name, country_name, session_id, conversation_id, directory
     try:
         hotel_response = get_hotel_id(session_id, conversation_id, country_name, city_name)
         if hotel_response and 'data' in hotel_response:
-            search_key = hotel_response['commonData'].get('searchKey')  # Get searchKey from commonData
+            search_key = hotel_response['commonData'].get('searchKey')
             if not search_key:
                 print(f"Error: 'searchKey' not found for {city_name}, {country_name}")
                 return
@@ -167,7 +171,7 @@ def process_city(city_name, country_name, session_id, conversation_id, directory
             update_query = update(global_hotel_mapping).where(
                 (global_hotel_mapping.c.CityName == city_name) &
                 (global_hotel_mapping.c.CountryName == country_name)
-            ).values(contentUpdateStatus='NOT OK')
+            ).values(contentUpdateStatus='NOT OK 2')
             session.execute(update_query)
             session.commit()
     except SQLAlchemyError as e:
@@ -177,7 +181,7 @@ def process_city(city_name, country_name, session_id, conversation_id, directory
         update_query = update(global_hotel_mapping).where(
             (global_hotel_mapping.c.CityName == city_name) &
             (global_hotel_mapping.c.CountryName == country_name)
-        ).values(contentUpdateStatus='NOT OK')
+        ).values(contentUpdateStatus='NOT OK 2')
         session.execute(update_query)
         session.commit()
     except Exception as e:
@@ -186,7 +190,7 @@ def process_city(city_name, country_name, session_id, conversation_id, directory
         update_query = update(global_hotel_mapping).where(
             (global_hotel_mapping.c.CityName == city_name) &
             (global_hotel_mapping.c.CountryName == country_name)
-        ).values(contentUpdateStatus='NOT OK')
+        ).values(contentUpdateStatus='NOT OK 2')
         session.execute(update_query)
         session.commit()
     finally:
@@ -206,7 +210,7 @@ def extract_provider_hotel_ids():
     # Fetch records from the database
     query = select(global_hotel_mapping.c.CityName, global_hotel_mapping.c.CountryName, global_hotel_mapping.c.contentUpdateStatus).where(
         or_(
-            global_hotel_mapping.c.contentUpdateStatus == None
+            global_hotel_mapping.c.contentUpdateStatus == 'NOT OK',
         )
     )
     result = Session.execute(query).fetchall()
@@ -226,7 +230,7 @@ def extract_provider_hotel_ids():
     directory = r"D:\content_for_hotel_json\HotelInfo\dnata"
 
     # Use ThreadPoolExecutor to process cities concurrently
-    with ThreadPoolExecutor(max_workers=20) as executor:
+    with ThreadPoolExecutor(max_workers=10) as executor:
         future_to_city = {executor.submit(process_city, row[0], row[1], session_id, conversation_id, directory): (row[0], row[1]) for row in result}
 
         for future in as_completed(future_to_city):
@@ -236,11 +240,7 @@ def extract_provider_hotel_ids():
             except Exception as exc:
                 print(f"Error processing {city_name}, {country_name}: {exc}")
 
-    Session.remove()  # Remove the session to avoid concurrency issues
+    Session.remove() 
 
 # Call the function to extract provider hotel IDs and save property info to JSON files
 extract_provider_hotel_ids()
-
-
-
-
