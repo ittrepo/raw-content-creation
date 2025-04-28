@@ -13,32 +13,29 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Get database credentials from environment variables
 db_host = os.getenv('DB_HOST')
 db_user = os.getenv('DB_USER')
 db_password = os.getenv('DB_PASSWORD')
 db_name = os.getenv('DB_NAME')
 
-# Database connection string
 DATABASE_URI = f'mysql+pymysql://{db_user}:{db_password}@{db_host}/{db_name}'
 
-# Connect to the database
 engine = create_engine(DATABASE_URI)
 
 # Load the JSON file
-json_path = r'D:\content_for_hotel_json\HotelInfo\dnata\935865.json'
+json_path = r'D:\content_for_hotel_json\HotelInfo\dnata\1591848.json'
 with open(json_path, 'r') as file:
     hotel_data = json.load(file)
 
-# Convert empty strings to None in the JSON data
+# Convert empty strings to None in the JSON data    
 hotel_data = {k: (v if v != "" else None) for k, v in hotel_data.items()}
 
 # Query the database to get the existing hotel data
-query = "SELECT Id, Name, Latitude, Longitude, AddressLine1, AddressLine2, CityName FROM global_hotel_mapping"
+query = "SELECT Id, Name, Latitude, Longitude, AddressLine1, AddressLine2, CityName, CountryName FROM mapping_short_info"
 df = pd.read_sql(query, engine)
 
 # Fill NaN values with an empty string for text columns
-for col in ['Name', 'AddressLine1', 'AddressLine2', 'CityName']:
+for col in ['Name', 'AddressLine1', 'AddressLine2', 'CityName', 'CountryName']:
     df[col] = df[col].fillna('')
 
 # Impute missing values in numeric columns
@@ -47,7 +44,7 @@ df[['Latitude', 'Longitude']] = imputer.fit_transform(df[['Latitude', 'Longitude
 
 # Feature engineering
 vectorizer = TfidfVectorizer()
-X_text = vectorizer.fit_transform(df['Name'] + " " + df['AddressLine1'] + " " + df['AddressLine2'] + " " + df['CityName'])
+X_text = vectorizer.fit_transform(df['Name'] + " " + df['AddressLine1'] + " " + df['AddressLine2'] + " " + df['CityName'] + " " + df['CountryName'])
 
 # Reduce dimensionality of text data
 svd = TruncatedSVD(n_components=50)  # Reduce the number of components further
@@ -68,12 +65,13 @@ index = faiss.IndexHNSWFlat(dimension, 16)
 index.add(X)
 
 # Function to predict ID
-def predict_id(name, latitude, longitude, address1, address2, city):
+def predict_id(name, latitude, longitude, address1, address2, city, country):
     # Convert None values to empty strings
     name = str(name) if name is not None else ""
     address1 = str(address1) if address1 is not None else ""
     address2 = str(address2) if address2 is not None else ""
     city = str(city) if city is not None else ""
+    country = str(country) if country is not None else ""
 
     input_text = vectorizer.transform([name + " " + address1 + " " + address2 + " " + city])
     input_text_reduced = svd.transform(input_text)
@@ -94,7 +92,8 @@ input_data = {
     'longitude': float(hotel_data['longitude']),
     'address1': hotel_data['address'],
     'address2': hotel_data['address2'] if hotel_data.get('address2') else "",  
-    'city': hotel_data['city']
+    'city': hotel_data['city'],
+    'country': hotel_data['country']
 }
 
 print(predict_id(**input_data))
