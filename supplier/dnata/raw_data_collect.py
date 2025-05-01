@@ -165,7 +165,7 @@ def process_city(city_name, country_name, session_id, conversation_id, directory
             update_query = update(global_hotel_mapping).where(
                 (global_hotel_mapping.c.CityName == city_name) &
                 (global_hotel_mapping.c.CountryName == country_name)
-            ).values(contentUpdateStatus='NOT OK 2')
+            ).values(contentUpdateStatus='NOT OK 3')
             session.execute(update_query)
             session.commit()
     except SQLAlchemyError as e:
@@ -175,7 +175,7 @@ def process_city(city_name, country_name, session_id, conversation_id, directory
         update_query = update(global_hotel_mapping).where(
             (global_hotel_mapping.c.CityName == city_name) &
             (global_hotel_mapping.c.CountryName == country_name)
-        ).values(contentUpdateStatus='NOT OK 2')
+        ).values(contentUpdateStatus='NOT OK 3')
         session.execute(update_query)
         session.commit()
     except Exception as e:
@@ -184,7 +184,7 @@ def process_city(city_name, country_name, session_id, conversation_id, directory
         update_query = update(global_hotel_mapping).where(
             (global_hotel_mapping.c.CityName == city_name) &
             (global_hotel_mapping.c.CountryName == country_name)
-        ).values(contentUpdateStatus='NOT OK 2')
+        ).values(contentUpdateStatus='NOT OK 3')
         session.execute(update_query)
         session.commit()
     finally:
@@ -204,7 +204,7 @@ def extract_provider_hotel_ids():
     # Fetch records from the database
     query = select(global_hotel_mapping.c.CityName, global_hotel_mapping.c.CountryName, global_hotel_mapping.c.contentUpdateStatus).where(
         or_(
-            global_hotel_mapping.c.contentUpdateStatus == 'NOT OK',
+            global_hotel_mapping.c.contentUpdateStatus == 'NOT OK 2',
         )
     )
     result = Session.execute(query).fetchall()
