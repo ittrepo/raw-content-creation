@@ -17,6 +17,7 @@ paramiko = "*"
 scikit-learn = "*"
 geopy = "*"
 faiss-cpu = "*"
+pycountry = "*"
 
 [dev-packages]
 
