@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, MetaData, Table, select, update
+from sqlalchemy import create_engine, MetaData, Table, select, update, not_, or_
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.exc import SQLAlchemyError
 import requests
@@ -68,8 +68,14 @@ if not token:
 
 # Fetch city names from the database
 session = Session()
-city_names = session.query(country_info.c.CityName).all()
-
+# print("hellow")
+city_names = session.query(country_info.c.CityName).filter(
+    or_(
+        country_info.c.akbar_status != 'ok',
+        country_info.c.akbar_status == None  # Handles NULL values
+    )
+).all()
+# print(city_names)
 for city_name in city_names:
     city_name = city_name[0]
     url = f"https://travelportal.benzyinfotech.com/api/content/autosuggest?term={city_name}"
