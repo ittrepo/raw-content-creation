@@ -78,7 +78,7 @@ city_names = session.query(country_info.c.CityName).filter(
 # print(city_names)
 for city_name in city_names:
     city_name = city_name[0]
-    url = f"https://travelportal.benzyinfotech.com/api/content/autosuggest?term={city_name}"
+    url = f"https://travelportalapi.benzyinfotech.com/api/content/autosuggest?term={city_name}"
     headers = {
       'Authorization': f'Bearer {token}'
     }

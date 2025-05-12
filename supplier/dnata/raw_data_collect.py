@@ -29,7 +29,6 @@ engine = create_engine(
 metadata = MetaData()
 metadata.reflect(bind=engine)
 
-
 # Check if the table exists
 if 'country_info' in metadata.tables:
     global_hotel_mapping = Table("country_info", metadata, autoload_with=engine)
@@ -59,7 +58,6 @@ def get_user_auth():
     if response.status_code == 200:
         return response.json()
     else:
-        # print(f"Error: Unable to authenticate. Status code: {response.status_code}, Response: {response.text}")
         return None
 
 def get_hotel_id(session_id, conversation_id, country, city):
@@ -67,8 +65,8 @@ def get_hotel_id(session_id, conversation_id, country, city):
     payload = json.dumps({
         "country": country,
         "city": city,
-        "checkIn": "2025-06-15",
-        "checkOut": "2025-06-30",
+        "checkIn": "2025-08-15",
+        "checkOut": "2025-08-30",
         "rooms": [
             {
                 "adult": 2,
@@ -99,7 +97,6 @@ def get_hotel_id(session_id, conversation_id, country, city):
     if response.status_code == 200:
         return response.json()
     else:
-        print(f"Error: Unable to get hotel IDs for {city}, {country}. Status code: {response.status_code}, Response: {response.text}")
         return None
 
 def get_hotel_details(session_id, conversation_id, hotel_key, search_key):
@@ -119,7 +116,6 @@ def get_hotel_details(session_id, conversation_id, hotel_key, search_key):
     if response.status_code == 200:
         return response.json()
     else:
-        print(f"Error: Unable to get hotel details. Status code: {response.status_code}, Response: {response.text}")
         return None
 
 def save_property_info_to_json(property_info, provider_hotel_id, directory):
@@ -142,17 +138,25 @@ def process_city(city_name, country_name, session_id, conversation_id, directory
                 print(f"Error: 'searchKey' not found for {city_name}, {country_name}")
                 return
 
+            processed = False  # Track if any hotel was processed
             for hotel in hotel_response['data']:
                 provider_hotel_id = hotel['propertyInfo']['providerHotelId']
                 hotel_key = hotel['hotelKey']
+
+                # Check if JSON file already exists
+                file_path = os.path.join(directory, f"{provider_hotel_id}.json")
+                if os.path.exists(file_path):
+                    print(f"Skipping {provider_hotel_id} as JSON file exists.")
+                    continue
 
                 # Get hotel details
                 hotel_details = get_hotel_details(session_id, conversation_id, hotel_key, search_key)
                 if hotel_details and 'data' in hotel_details:
                     property_info = hotel_details['data'][0]
                     save_property_info_to_json(property_info, provider_hotel_id, directory)
+                    processed = True
 
-            # Update the contentUpdateStatus to 'OK'
+            # Update the contentUpdateStatus to 'OK' if processed or all exist
             update_query = update(global_hotel_mapping).where(
                 (global_hotel_mapping.c.CityName == city_name) &
                 (global_hotel_mapping.c.CountryName == country_name)
@@ -160,8 +164,7 @@ def process_city(city_name, country_name, session_id, conversation_id, directory
             session.execute(update_query)
             session.commit()
         else:
-            # print(f"Error: 'data' key not found in hotel response for {city_name}, {country_name}")
-            # Update the contentUpdateStatus to 'NOT OK'
+            # Update the contentUpdateStatus to 'NOT OK 3' if no data
             update_query = update(global_hotel_mapping).where(
                 (global_hotel_mapping.c.CityName == city_name) &
                 (global_hotel_mapping.c.CountryName == country_name)
@@ -169,9 +172,7 @@ def process_city(city_name, country_name, session_id, conversation_id, directory
             session.execute(update_query)
             session.commit()
     except SQLAlchemyError as e:
-        # print(f"Error processing {city_name}, {country_name}: {e}")
-        session.rollback()  # Rollback the transaction in case of error
-        # Update the contentUpdateStatus to 'NOT OK'
+        session.rollback()
         update_query = update(global_hotel_mapping).where(
             (global_hotel_mapping.c.CityName == city_name) &
             (global_hotel_mapping.c.CountryName == country_name)
@@ -179,8 +180,7 @@ def process_city(city_name, country_name, session_id, conversation_id, directory
         session.execute(update_query)
         session.commit()
     except Exception as e:
-        # print(f"Error processing {city_name}, {country_name}: {e}")
-        # Update the contentUpdateStatus to 'NOT OK'
+        session.rollback()
         update_query = update(global_hotel_mapping).where(
             (global_hotel_mapping.c.CityName == city_name) &
             (global_hotel_mapping.c.CountryName == country_name)
@@ -188,12 +188,11 @@ def process_city(city_name, country_name, session_id, conversation_id, directory
         session.execute(update_query)
         session.commit()
     finally:
-        Session.remove()  # Remove the session to avoid concurrency issues
+        Session.remove()
 
 def extract_provider_hotel_ids():
     auth_response = get_user_auth()
     if not auth_response:
-        # print("Authentication failed. Exiting.")
         return
 
     session_id = auth_response['data'][0]['sessionId']
@@ -201,21 +200,11 @@ def extract_provider_hotel_ids():
     if not conversation_id:
         conversation_id = str(uuid.uuid4())
 
-    # Fetch records from the database
-    query = select(global_hotel_mapping.c.CityName, global_hotel_mapping.c.CountryName, global_hotel_mapping.c.contentUpdateStatus).where(
-        or_(
-            global_hotel_mapping.c.contentUpdateStatus == 'NOT OK 2',
-        )
+    # Fetch records where contentUpdateStatus is NULL
+    query = select(global_hotel_mapping.c.CityName, global_hotel_mapping.c.CountryName).where(
+        global_hotel_mapping.c.contentUpdateStatus == None
     )
     result = Session.execute(query).fetchall()
-
-    # Print the query result for debugging
-    # print("Query Result:", result)
-
-    # Fetch a few sample records to verify data
-    sample_query = select(global_hotel_mapping).limit(5)
-    sample_result = Session.execute(sample_query).fetchall()
-    # print("Sample Records:", sample_result)
 
     if not result:
         print("No records found to process.")
@@ -224,17 +213,17 @@ def extract_provider_hotel_ids():
     directory = r"D:\content_for_hotel_json\HotelInfo\dnata"
 
     # Use ThreadPoolExecutor to process cities concurrently
-    with ThreadPoolExecutor(max_workers=10) as executor:
+    with ThreadPoolExecutor(max_workers=5) as executor:
         future_to_city = {executor.submit(process_city, row[0], row[1], session_id, conversation_id, directory): (row[0], row[1]) for row in result}
 
         for future in as_completed(future_to_city):
             city_name, country_name = future_to_city[future]
             try:
-                future.result()  # Get the result to raise any exceptions
+                future.result()
             except Exception as exc:
                 print(f"Error processing {city_name}, {country_name}: {exc}")
 
-    Session.remove() 
+    Session.remove()
 
 # Call the function to extract provider hotel IDs and save property info to JSON files
 extract_provider_hotel_ids()
