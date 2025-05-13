@@ -126,7 +126,7 @@ def save_property_info_to_json(property_info, provider_hotel_id, directory):
     # Write the property_info to the file
     with open(file_path, 'w') as file:
         json.dump(property_info, file, indent=4)
-    print(f"✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅ Saved {file_path}")
+    print(f"🐍🐍🐍🐍🐍🐍🐍 Saved {file_path}")
 
 def process_city(city_name, country_name, session_id, conversation_id, directory):
     session = Session()
