@@ -13,7 +13,7 @@ db_user = os.getenv('DB_USER')
 db_password = os.getenv('DB_PASSWORD')
 db_name = os.getenv('DB_NAME')
 
-table = "itt_new_mapping_v01"
+table = "global_hotel_mapping"
 
 
 connection_url = f"mysql+pymysql://{db_user}:{db_password}@{db_host}/{db_name}"

@@ -79,7 +79,7 @@ def main():
 
     # Iterate through all pages (1 to 350553)
     total_pages = 350553
-    for page in range(730, total_pages + 1):
+    for page in range(3774, total_pages + 1):
         print(f"Processing page {page}/{total_pages}")
 
         # Fetch hotel data for the current page
