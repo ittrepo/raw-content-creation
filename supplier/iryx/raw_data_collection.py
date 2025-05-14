@@ -37,6 +37,17 @@ def fetch_hotel_type(type_url, token):
         print(f"Error fetching hotel type: {e}")
     return None
 
+def fetch_hotel_image(type_url, token):
+    headers = {'Authorization': f'Bearer {token}'}
+    try:
+        response = requests.get(type_url, headers=headers, data="")
+        if response.status_code == 200:
+            return response.json()
+    except Exception as e:
+        print(f"Error fetching hotel type: {e}")
+    return None
+
+
 # Step 3: Fetch hotel data for a given page
 def fetch_hotel_data(page, token):
     url = f"https://satgurudmc.com/reseller/api/mapping/v1/hotels?page={page}"
@@ -50,6 +61,7 @@ def fetch_hotel_data(page, token):
     except Exception as e:
         print(f"Error fetching data for page {page}: {e}")
     return None
+
 
 # Step 4: Save hotel data to JSON file
 def save_hotel_data(hotel, type_data=None, image_data=None):
@@ -79,7 +91,7 @@ def main():
 
     # Iterate through all pages (1 to 350553)
     total_pages = 350553
-    for page in range(3774, total_pages + 1):
+    for page in range(6048, total_pages + 1):
         print(f"Processing page {page}/{total_pages}")
 
         # Fetch hotel data for the current page
@@ -103,7 +115,7 @@ def main():
                 if "self" in hotel["_links"]:
                     image_url = hotel["_links"]["self"]["href"]
                     # Assuming fetch_hotel_data can also fetch image data if needed
-                    # image_data = fetch_hotel_data(image_url, token)
+                    image_data = fetch_hotel_image(image_url, token)
 
             # Save hotel data to JSON file
             save_hotel_data(hotel, type_data, image_data)
