@@ -93,7 +93,7 @@ def main():
     token = get_bearer_token()
     total_pages = 350553
 
-    for page in range(8967, total_pages + 1):
+    for page in range(10050, total_pages + 1):
         print(f"Processing page {page}/{total_pages}")
         data = fetch_hotel_data(page, token)
         if not data:
