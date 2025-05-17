@@ -3,6 +3,7 @@ import json
 import os
 import time
 from dotenv import load_dotenv
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 load_dotenv()
 
@@ -88,27 +89,37 @@ def save_hotel_data(hotel, token, type_data=None):
         json.dump(data_to_save, f, indent=4, ensure_ascii=False)
     print(f"Saved {filename}")
 
-# Main function to process all pages
+
+def process_hotel(hotel, token):
+    type_data = None
+    if "_links" in hotel and "type" in hotel["_links"]:
+        type_url = hotel["_links"]["type"]["href"]
+        type_data = fetch_hotel_type(type_url, token)
+    save_hotel_data(hotel, token, type_data)
+
 def main():
     token = get_bearer_token()
     total_pages = 350553
 
-    for page in range(10050, total_pages + 1):
+    for page in range(15791, total_pages + 1):
         print(f"Processing page {page}/{total_pages}")
         data = fetch_hotel_data(page, token)
         if not data:
             continue
 
         hotels = data.get("_embedded", {}).get("hotels", [])
-        for hotel in hotels:
-            type_data = None
-            if "_links" in hotel and "type" in hotel["_links"]:
-                type_url = hotel["_links"]["type"]["href"]
-                type_data = fetch_hotel_type(type_url, token)
+        if not hotels:
+            continue
 
-            save_hotel_data(hotel, token, type_data)
+        # Use ThreadPoolExecutor to process hotels in parallel
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            futures = [executor.submit(process_hotel, hotel, token) for hotel in hotels]
+            for future in as_completed(futures):
+                try:
+                    future.result()
+                except Exception as e:
+                    print(f"Error in thread execution: {e}")
 
         time.sleep(1)
-
 if __name__ == "__main__":
     main()
