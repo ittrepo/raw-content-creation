@@ -20,7 +20,7 @@ def get_bearer_token():
         'Content-Type': 'application/x-www-form-urlencoded',
         'Authorization': f'Basic {iryx_token}'
     }
-    response = requests.post(url, headers=headers, data=payload)
+    response = requests.post(url, headers=headers, data=payload, timeout=10)
     if response.status_code == 200:
         return response.json().get("access_token")
     else:
@@ -42,7 +42,7 @@ def fetch_hotel_images(hotel_id, token):
     url = f"https://satgurudmc.com/reseller/api/mapping/v1/hotels/{hotel_id}/images?"
     headers = {'Authorization': f'Bearer {token}'}
     try:
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, timeout=10)
         if response.status_code == 200:
             return response.json()
         else:
@@ -53,10 +53,10 @@ def fetch_hotel_images(hotel_id, token):
 
 # Step 4: Fetch hotel data for a given page
 def fetch_hotel_data(page, token):
-    url = f"https://satgurudmc.com/reseller/api/mapping/v1/hotels?page={page}"
+    url = f"https://satgurudmc.com/reseller/api/mapping/v1/hotels?page={page}&perPage=100"
     headers = {'Authorization': f'Bearer {token}'}
     try:
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, timeout=10)
         if response.status_code == 200:
             return response.json()
         else:
@@ -99,9 +99,9 @@ def process_hotel(hotel, token):
 
 def main():
     token = get_bearer_token()
-    total_pages = 350553
+    total_pages = 35072
 
-    for page in range(15791, total_pages + 1):
+    for page in range(5092, total_pages + 1):
         print(f"Processing page {page}/{total_pages}")
         data = fetch_hotel_data(page, token)
         if not data:
@@ -112,7 +112,7 @@ def main():
             continue
 
         # Use ThreadPoolExecutor to process hotels in parallel
-        with ThreadPoolExecutor(max_workers=2) as executor:
+        with ThreadPoolExecutor(max_workers=1) as executor:
             futures = [executor.submit(process_hotel, hotel, token) for hotel in hotels]
             for future in as_completed(futures):
                 try:
