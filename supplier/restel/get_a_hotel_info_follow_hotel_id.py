@@ -8,8 +8,8 @@ xml_data = """<?xml version="1.0" encoding="UTF-8"?>
    <nombre>Servicio de información de hotel</nombre>
    <agencia>Agencia prueba</agencia>
    <parametros>
-      <codigo>000646</codigo>
-      <idioma>1</idioma>
+      <codigo>000772</codigo>
+      <idioma>2</idioma>
    </parametros>
 </peticion>"""
 

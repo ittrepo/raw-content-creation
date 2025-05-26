@@ -38,7 +38,7 @@ def get_supplier_own_raw_data(hotel_id):
     <agencia>Agencia prueba</agencia>
     <parametros>
         <codigo>{hotel_id}</codigo>
-        <idioma>1</idioma>
+        <idioma>2</idioma>
     </parametros>
     </peticion>"""
 
