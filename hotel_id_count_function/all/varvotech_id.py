@@ -13,7 +13,7 @@ db_password = os.getenv('DB_PASSWORD')
 db_name = os.getenv('DB_NAME')
 
 # Database table name
-table = "global_hotel_mapping"
+table = "vervotech_mapping"
 
 # Create SQLAlchemy engine
 connection_url = f"mysql+pymysql://{db_user}:{db_password}@{db_host}/{db_name}"
@@ -26,7 +26,7 @@ query = f"SELECT DISTINCT VervotechId FROM {table} WHERE VervotechId IS NOT NULL
 df = pd.read_sql(query, engine)
 
 # Save to text file (one ID per line)
-output_path = "varvotech_id_list.txt"
+output_path = "varvotech_id_list_varvotech_mapping.txt"
 df["VervotechId"].dropna().astype(str).to_csv(output_path, index=False, header=False)
 
 print(f"✅ Done. VervotechId list saved to: {output_path}")
