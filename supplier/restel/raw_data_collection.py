@@ -50,7 +50,7 @@ def get_supplier_own_raw_data(hotel_id):
     'Cookie': 'JSESSIONID=aaaodjlEZaLhM_vAad2xz'
     }
 
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, headers=headers, timeout=10)
     if response.status_code == 200:
         try:
             data = xmltodict.parse(response.text)
