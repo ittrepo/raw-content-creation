@@ -28,48 +28,36 @@ CITY_HEADERS = {
     'API-key': API_KEY
 }
 
-# thread‑safe file I/O
+# thread-safe file I/O
 lock = threading.Lock()
 
 def get_supplier_own_raw_data(hotel_id):
     os.makedirs(BASE_PATH, exist_ok=True)
-    # 1) hotel
     hotel_url = f"https://api-sandbox.grnconnect.com/api/v3/hotels?hcode={hotel_id}&version=2.0"
     r = requests.get(hotel_url, headers=HEADERS); r.raise_for_status()
     hotel = r.json()['hotels'][0]
-    # 2) country
     country_code = hotel.get('country')
     r = requests.get(f"https://api-sandbox.grnconnect.com/api/v3/countries/{country_code}", headers=HEADERS)
     r.raise_for_status()
     country = r.json().get('country', {})
-    # 3) city
     city_code = hotel.get('city_code')
     r = requests.get(f"https://api-sandbox.grnconnect.com/api/v3/cities/{city_code}?version=2.0", headers=CITY_HEADERS)
     r.raise_for_status()
     city = r.json().get('city', {})
-    # 4) images
     r = requests.get(f"https://api-sandbox.grnconnect.com/api/v3/hotels/{hotel_id}/images?version=2.0", headers=HEADERS)
     r.raise_for_status()
     images = r.json().get('images', {}).get('regular', [])
 
-    return {
-        'hotel_code': hotel_id,
-        'hotel': hotel,
-        'country': country,
-        'city': city,
-        'images': images
-    }
+    return {'hotel_code': hotel_id, 'hotel': hotel, 'country': country, 'city': city, 'images': images}
 
 def write_json_and_log(hotel_id):
     """
-    Worker for a single hotel_id:
     - skips if file exists
     - fetches data, writes .json
     - logs hotel_id to success or not_found
-    - returns hotel_id for tracking removal
+    - immediately removes IDs from TRACKING_FILE
     """
     out_path = os.path.join(BASE_PATH, f"{hotel_id}.json")
-    # skip existing
     if os.path.exists(out_path):
         status = 'success'
     else:
@@ -81,20 +69,33 @@ def write_json_and_log(hotel_id):
         except Exception:
             status = 'not_found'
 
-    # thread‑safe appends
     with lock:
+        # append to appropriate log
+        log_file = SUCCESS_FILE if status == 'success' else NOT_FOUND_FILE
+        with open(log_file, 'a', encoding='utf-8') as f:
+            f.write(hotel_id + "\n")
+
+        # remove immediately from tracking
+        if os.path.exists(TRACKING_FILE):
+            with open(TRACKING_FILE, 'r', encoding='utf-8') as tf:
+                ids = [l.strip() for l in tf if l.strip()]
+            ids = [i for i in ids if i != hotel_id]
+            with open(TRACKING_FILE, 'w', encoding='utf-8') as tf:
+                tf.write("\n".join(ids) + "\n")
+
+        # print status
         if status == 'success':
-            with open(SUCCESS_FILE, 'a', encoding='utf-8') as f:
-                f.write(hotel_id + "\n")
+            print(f"✔️🐍🐍🐍 Completed {hotel_id}")
         else:
-            with open(NOT_FOUND_FILE, 'a', encoding='utf-8') as f:
-                f.write(hotel_id + "\n")
-    return hotel_id
+            print(f"⚠️ Not found {hotel_id}")
+
+    return status
 
 def initialize_tracking(hotel_ids):
     if not os.path.exists(TRACKING_FILE):
         with open(TRACKING_FILE, 'w', encoding='utf-8') as f:
             f.write("\n".join(hotel_ids) + "\n")
+
 
 def load_tracking():
     if not os.path.exists(TRACKING_FILE):
@@ -102,14 +103,9 @@ def load_tracking():
     with open(TRACKING_FILE, 'r', encoding='utf-8') as f:
         return [line.strip() for line in f if line.strip()]
 
-def save_tracking(remaining_ids):
-    with open(TRACKING_FILE, 'w', encoding='utf-8') as f:
-        f.write("\n".join(remaining_ids) + "\n")
 
 def process_hotels(concurrency=20):
     os.makedirs(BASE_PATH, exist_ok=True)
-
-    # load master list
     if not os.path.exists(HOTEL_ID_LIST):
         print("Hotel ID list not found.")
         return
@@ -122,23 +118,16 @@ def process_hotels(concurrency=20):
         print("No hotel IDs left.")
         return
 
-    # launch threads
     with ThreadPoolExecutor(max_workers=concurrency) as exe:
         futures = {exe.submit(write_json_and_log, hid): hid for hid in to_process}
-        processed = []
         for fut in as_completed(futures):
-            hid = futures[fut]
             try:
                 fut.result()
-                print(f"✔️🐍🐍🐍 Completed {hid}")
             except Exception as e:
+                hid = futures[fut]
                 print(f"❌ Error {hid}: {e}")
-            processed.append(hid)
 
-    # remove processed from tracking
-    remaining = [hid for hid in to_process if hid not in processed]
-    save_tracking(remaining)
-    print("All done.")
+    print("Processing pass complete.")
 
 if __name__ == "__main__":
     process_hotels(concurrency=10)
