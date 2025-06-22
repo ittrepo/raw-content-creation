@@ -32,7 +32,6 @@ CITY_HEADERS = {
 lock = threading.Lock()
 
 # First call to hotel endpoint to check existence
-
 def check_hotel_exists(hotel_id):
     url = f"https://api-sandbox.grnconnect.com/api/v3/hotels?hcode={hotel_id}&version=2.0"
     resp = requests.get(url, headers=HEADERS, timeout=15)
