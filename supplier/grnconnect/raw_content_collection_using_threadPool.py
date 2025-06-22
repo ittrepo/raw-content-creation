@@ -3,7 +3,7 @@ import threading
 import requests
 import json
 from dotenv import load_dotenv
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
 
 load_dotenv()
 
@@ -35,7 +35,7 @@ lock = threading.Lock()
 
 def check_hotel_exists(hotel_id):
     url = f"https://api-sandbox.grnconnect.com/api/v3/hotels?hcode={hotel_id}&version=2.0"
-    resp = requests.get(url, headers=HEADERS)
+    resp = requests.get(url, headers=HEADERS, timeout=15)
     resp.raise_for_status()
     data = resp.json()
     return data.get('total', 0) > 0, data
@@ -43,17 +43,16 @@ def check_hotel_exists(hotel_id):
 
 def get_supplier_own_raw_data(hotel_json, hotel_id):
     os.makedirs(BASE_PATH, exist_ok=True)
-    # use provided hotel_json
     hotel = hotel_json['hotels'][0]
     country_code = hotel.get('country')
-    r = requests.get(f"https://api-sandbox.grnconnect.com/api/v3/countries/{country_code}", headers=HEADERS)
+    r = requests.get(f"https://api-sandbox.grnconnect.com/api/v3/countries/{country_code}", headers=HEADERS, timeout=15)
     r.raise_for_status()
     country = r.json().get('country', {})
     city_code = hotel.get('city_code')
-    r = requests.get(f"https://api-sandbox.grnconnect.com/api/v3/cities/{city_code}?version=2.0", headers=CITY_HEADERS)
+    r = requests.get(f"https://api-sandbox.grnconnect.com/api/v3/cities/{city_code}?version=2.0", headers=CITY_HEADERS, timeout=15)
     r.raise_for_status()
     city = r.json().get('city', {})
-    r = requests.get(f"https://api-sandbox.grnconnect.com/api/v3/hotels/{hotel_id}/images?version=2.0", headers=HEADERS)
+    r = requests.get(f"https://api-sandbox.grnconnect.com/api/v3/hotels/{hotel_id}/images?version=2.0", headers=HEADERS, timeout=15)
     r.raise_for_status()
     images = r.json().get('images', {}).get('regular', [])
 
@@ -61,14 +60,7 @@ def get_supplier_own_raw_data(hotel_json, hotel_id):
 
 
 def write_json_and_log(hotel_id):
-    """
-    - checks existence via total
-    - skips if not found or file exists
-    - fetches data, writes .json
-    - logs hotel_id and removes from TRACKING_FILE immediately
-    """
     out_path = os.path.join(BASE_PATH, f"{hotel_id}.json")
-    # check existence
     try:
         exists, hotel_data = check_hotel_exists(hotel_id)
     except Exception:
@@ -76,7 +68,6 @@ def write_json_and_log(hotel_id):
     status = 'not_found'
 
     if not exists:
-        # not found or error on check
         status = 'not_found'
     elif os.path.exists(out_path):
         status = 'success'
@@ -89,20 +80,16 @@ def write_json_and_log(hotel_id):
         except Exception:
             status = 'not_found'
 
-    # thread-safe logging + removal
     with lock:
-        # append to appropriate log
         log_file = SUCCESS_FILE if status == 'success' else NOT_FOUND_FILE
         with open(log_file, 'a', encoding='utf-8') as f:
             f.write(hotel_id + "\n")
-        # remove immediately from tracking
         if os.path.exists(TRACKING_FILE):
             with open(TRACKING_FILE, 'r', encoding='utf-8') as tf:
                 ids = [l.strip() for l in tf if l.strip()]
             ids = [i for i in ids if i != hotel_id]
             with open(TRACKING_FILE, 'w', encoding='utf-8') as tf:
                 tf.write("\n".join(ids) + "\n")
-        # print
         if status == 'success':
             print(f"✔️🐍🐍🐍 Completed {hotel_id}")
         else:
@@ -141,10 +128,19 @@ def process_hotels(concurrency=20):
     with ThreadPoolExecutor(max_workers=concurrency) as exe:
         futures = {exe.submit(write_json_and_log, hid): hid for hid in to_process}
         for fut in as_completed(futures):
+            hid = futures[fut]
             try:
-                fut.result()
+                fut.result(timeout=15)
+            except TimeoutError:
+                with lock:
+                    if os.path.exists(TRACKING_FILE):
+                        with open(TRACKING_FILE, 'r', encoding='utf-8') as tf:
+                            ids = [l.strip() for l in tf if l.strip()]
+                        ids = [i for i in ids if i != hid]
+                        with open(TRACKING_FILE, 'w', encoding='utf-8') as tf:
+                            tf.write("\n".join(ids) + "\n")
+                print(f"⏰ Timeout: {hid} skipped")
             except Exception as e:
-                hid = futures[fut]
                 print(f"❌ Error {hid}: {e}")
 
     print("Processing pass complete.")
