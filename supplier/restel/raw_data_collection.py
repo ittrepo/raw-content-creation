@@ -17,7 +17,7 @@ HOTEL_ID_LIST = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/res
 TRACKING_FILE = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/restel/restel_tracking_file.txt"
 SUCCESS_FILE = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/restel/successful_done_hotel_id_list.txt"
 NOT_FOUND_FILE = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/restel/restel_not_found.txt"
-BASE_PATH = "D:/content_for_hotel_json/cdn_row_collection/restel"
+BASE_PATH = "D:/content_for_hotel_json/cdn_row_collection/restel_2"
 
 
 REQUEST_DELAY = 1
