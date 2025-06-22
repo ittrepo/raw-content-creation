@@ -31,11 +31,20 @@ CITY_HEADERS = {
 # thread-safe file I/O
 lock = threading.Lock()
 
-def get_supplier_own_raw_data(hotel_id):
+# First call to hotel endpoint to check existence
+
+def check_hotel_exists(hotel_id):
+    url = f"https://api-sandbox.grnconnect.com/api/v3/hotels?hcode={hotel_id}&version=2.0"
+    resp = requests.get(url, headers=HEADERS)
+    resp.raise_for_status()
+    data = resp.json()
+    return data.get('total', 0) > 0, data
+
+
+def get_supplier_own_raw_data(hotel_json, hotel_id):
     os.makedirs(BASE_PATH, exist_ok=True)
-    hotel_url = f"https://api-sandbox.grnconnect.com/api/v3/hotels?hcode={hotel_id}&version=2.0"
-    r = requests.get(hotel_url, headers=HEADERS); r.raise_for_status()
-    hotel = r.json()['hotels'][0]
+    # use provided hotel_json
+    hotel = hotel_json['hotels'][0]
     country_code = hotel.get('country')
     r = requests.get(f"https://api-sandbox.grnconnect.com/api/v3/countries/{country_code}", headers=HEADERS)
     r.raise_for_status()
@@ -50,31 +59,42 @@ def get_supplier_own_raw_data(hotel_id):
 
     return {'hotel_code': hotel_id, 'hotel': hotel, 'country': country, 'city': city, 'images': images}
 
+
 def write_json_and_log(hotel_id):
     """
-    - skips if file exists
+    - checks existence via total
+    - skips if not found or file exists
     - fetches data, writes .json
-    - logs hotel_id to success or not_found
-    - immediately removes IDs from TRACKING_FILE
+    - logs hotel_id and removes from TRACKING_FILE immediately
     """
     out_path = os.path.join(BASE_PATH, f"{hotel_id}.json")
-    if os.path.exists(out_path):
+    # check existence
+    try:
+        exists, hotel_data = check_hotel_exists(hotel_id)
+    except Exception:
+        exists = False
+    status = 'not_found'
+
+    if not exists:
+        # not found or error on check
+        status = 'not_found'
+    elif os.path.exists(out_path):
         status = 'success'
     else:
         try:
-            data = get_supplier_own_raw_data(hotel_id)
+            data = get_supplier_own_raw_data(hotel_data, hotel_id)
             with open(out_path, 'w', encoding='utf-8') as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
             status = 'success'
         except Exception:
             status = 'not_found'
 
+    # thread-safe logging + removal
     with lock:
         # append to appropriate log
         log_file = SUCCESS_FILE if status == 'success' else NOT_FOUND_FILE
         with open(log_file, 'a', encoding='utf-8') as f:
             f.write(hotel_id + "\n")
-
         # remove immediately from tracking
         if os.path.exists(TRACKING_FILE):
             with open(TRACKING_FILE, 'r', encoding='utf-8') as tf:
@@ -82,14 +102,14 @@ def write_json_and_log(hotel_id):
             ids = [i for i in ids if i != hotel_id]
             with open(TRACKING_FILE, 'w', encoding='utf-8') as tf:
                 tf.write("\n".join(ids) + "\n")
-
-        # print status
+        # print
         if status == 'success':
             print(f"✔️🐍🐍🐍 Completed {hotel_id}")
         else:
             print(f"⚠️ Not found {hotel_id}")
 
     return status
+
 
 def initialize_tracking(hotel_ids):
     if not os.path.exists(TRACKING_FILE):
