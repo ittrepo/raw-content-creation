@@ -191,3 +191,4 @@ def process_hotels():
 # Run the function
 if __name__ == "__main__":
     process_hotels()
+    
