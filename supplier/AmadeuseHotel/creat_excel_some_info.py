@@ -15,23 +15,23 @@ database = os.getenv('DB_NAME')
 # --- CREATE CONNECTION --- #
 engine = create_engine(f"mysql+pymysql://{username}:{password}@{host}:{port}/{database}")
 
-# --- SQL QUERY FOR UNIQUE CityName --- #
+# --- SQL QUERY FOR UNIQUE CityName + CountryCode --- #
 query = """
 SELECT 
     MIN(`AddressLine1`) AS AddressLine1,
     `CityName`,
+    `CountryCode`,
     MIN(`CountryName`) AS CountryName,
     MIN(`Latitude`) AS Latitude,
     MIN(`Longitude`) AS Longitude
 FROM global_hotel_mapping
-WHERE CountryCode = 'AE'
-GROUP BY `CityName`;
+GROUP BY `CityName`, `CountryCode`;
 """
 
 # --- READ DATA TO DATAFRAME --- #
 df = pd.read_sql(query, engine)
 
 # --- SAVE TO EXCEL --- #
-df.to_excel("hotels_cities.xlsx", index=False)
+df.to_excel("unique_city_country_combinations.xlsx", index=False)
 
-print("Unique city data saved to hotels_cities.xlsx")
+print("Unique city + country data saved to unique_city_country_combinations.xlsx")

@@ -131,7 +131,7 @@ if response.status_code == 200:
     # print(json_output)
 
     # Save JSON to file
-    output_path = f"{hotel_code}.json"  # You can change the path as needed
+    output_path = f"{hotel_code}.json" 
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(json_output)
     print(f"JSON saved to {output_path}")

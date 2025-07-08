@@ -1,14 +1,13 @@
+import os
 import requests
 import uuid
 import base64
 import hashlib
 import datetime
 import random
-from lxml import etree
-import xml.etree.ElementTree as ET
 import json
 from dotenv import load_dotenv
-import os
+import xml.etree.ElementTree as ET
 
 load_dotenv()
 
@@ -20,11 +19,13 @@ office_id = 'DMMS228XU'
 duty_code = 'SU'
 requestor_type = 'U'
 soap_action = 'http://webservices.amadeus.com/OTA_HotelDescriptiveInfoRQ_07.1_1A2007A'
-hotel_code = 'XREJHXRG'
 wsap = '1ASIWAAAAAK'
 url = os.getenv('AMADEUSE_LIVE_URL')
 
-# ---------- Generate Dynamic WSSE Fields ---------- #
+output_dir = r"D:\content_for_hotel_json\cdn_row_collection\amadeuse\with_location"
+output_dir_for_single = r"D:\content_for_hotel_json\cdn_row_collection\amadeuse\single_hotel_data"
+os.makedirs(output_dir_for_single, exist_ok=True)
+
 def generate_uuid():
     return str(uuid.uuid4())
 
@@ -43,13 +44,61 @@ def generate_password_digest(nonce_b64, created, password):
     digest = hashlib.sha1(nonce_bytes + created.encode() + sha1_password).digest()
     return base64.b64encode(digest).decode()
 
-uuid_val = generate_uuid()
-timestamp = get_timestamp()
-nonce = generate_nonce()
-password_digest = generate_password_digest(nonce, timestamp, password)
 
-# ---------- Create SOAP Payload ---------- #
-soap_payload = f"""<?xml version="1.0" encoding="UTF-8"?>
+def remove_namespace(obj):
+    if isinstance(obj, dict):
+        new_obj = {}
+        for k, v in obj.items():
+            # Remove the namespace from the key if present
+            if isinstance(k, str) and k.startswith("{http://www.opentravel.org/OTA/2003/05}"):
+                new_key = k.replace("{http://www.opentravel.org/OTA/2003/05}", "")
+            else:
+                new_key = k
+            new_obj[new_key] = remove_namespace(v)
+        return new_obj
+    elif isinstance(obj, list):
+        return [remove_namespace(item) for item in obj]
+    else:
+        return obj
+    
+
+def xml_to_dict(element):
+    result = {}
+    if element.attrib:
+        result.update(element.attrib)
+    if element.text and element.text.strip():
+        if result:
+            result['text'] = element.text.strip()
+        else:
+            result = element.text.strip()
+    for child in element:
+        child_data = xml_to_dict(child)
+        if child.tag in result:
+            if isinstance(result[child.tag], list):
+                result[child.tag].append(child_data)
+            else:
+                result[child.tag] = [result[child.tag], child_data]
+        else:
+            result[child.tag] = child_data
+    return result
+
+for filename in os.listdir(output_dir):
+    if filename.endswith('.json'):
+        hotel_code = os.path.splitext(filename)[0]
+        out_path = os.path.join(output_dir_for_single, f"{hotel_code}.json")
+        if os.path.exists(out_path):
+            print(f"⏩ Skipping {hotel_code}, file already exists.")
+            continue
+
+        print(f"Processing hotel_code: {hotel_code}")
+
+        uuid_val = generate_uuid()
+        timestamp = get_timestamp()
+        nonce = generate_nonce()
+        password_digest = generate_password_digest(nonce, timestamp, password)
+
+        # ---------- Create SOAP Payload ---------- #
+        soap_payload = f"""<?xml version="1.0" encoding="UTF-8"?>
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
   <soap:Header>
     <add:MessageID xmlns:add="http://www.w3.org/2005/08/addressing">{uuid_val}</add:MessageID>
@@ -87,53 +136,24 @@ soap_payload = f"""<?xml version="1.0" encoding="UTF-8"?>
   </soap:Body>
 </soap:Envelope>"""
 
-# ---------- Send SOAP Request ---------- #
-headers = {
-    'Content-Type': 'text/xml',
-    'SOAPAction': soap_action,
-}
+        headers = {
+            'Content-Type': 'text/xml',
+            'SOAPAction': soap_action,
+        }
 
-response = requests.post(url, data=soap_payload.strip(), headers=headers)
-
-# ---------- Output Response ---------- #
-print("🟢 SOAP Request Sent. Response:")
-print(response.text)
-
-def xml_to_dict(element):
-    """Recursively convert an XML element to a dictionary."""
-    result = {}
-    if element.attrib:
-        result.update(element.attrib)
-    if element.text and element.text.strip():
-        if result:
-            result['text'] = element.text.strip()
-        else:
-            result = element.text.strip()
-
-    for child in element:
-        child_data = xml_to_dict(child)
-        if child.tag in result:
-            if isinstance(result[child.tag], list):
-                result[child.tag].append(child_data)
+        try:
+            response = requests.post(url, data=soap_payload.strip(), headers=headers, timeout=60)
+            # ...existing code...
+            if response.status_code == 200:
+                root = ET.fromstring(response.content)
+                response_dict = xml_to_dict(root)
+                response_dict = remove_namespace(response_dict)  # <--- Add this line
+                json_output = json.dumps(response_dict, indent=2)
+                with open(out_path, "w", encoding="utf-8") as f:
+                    f.write(json_output)
+                print(f"✅ Saved {out_path}")
+            # ...existing code...
             else:
-                result[child.tag] = [result[child.tag], child_data]
-        else:
-            result[child.tag] = child_data
-    return result
-
-if response.status_code == 200:
-    # Parse XML response
-    root = ET.fromstring(response.content)
-    # Convert XML to dictionary
-    response_dict = xml_to_dict(root)
-    # Convert dictionary to JSON
-    json_output = json.dumps(response_dict, indent=2)
-    # print(json_output)
-
-    # Save JSON to file
-    output_path = f"{hotel_code}.json"  # You can change the path as needed
-    with open(output_path, "w", encoding="utf-8") as f:
-        f.write(json_output)
-    print(f"JSON saved to {output_path}")
-else:
-    print(f"Request failed with status code: {response.status_code}")
+                print(f"❌ Failed for {hotel_code}: HTTP {response.status_code}")
+        except Exception as e:
+            print(f"❌ Exception for {hotel_code}: {e}")
