@@ -25,8 +25,8 @@ wsap = '1ASIWAAAAAK'
 url = os.getenv('AMADEUSE_LIVE_URL')
 
 
-hotel_id_xlsx = r"D:\Rokon\ofc_git\row_content_create\supplier\AmadeuseHotel\hotel_id_list.xlsx"
-output_dir_for_single = r"D:\content_for_hotel_json\cdn_row_collection\amadeuse\single_hotel_data"
+hotel_id_xlsx = r"D:\Rokon\ofc_git\row_content_create\supplier\AmadeuseHotel\amadeuse_hotel_list.xlsx"
+output_dir_for_single = r"D:\content_for_hotel_json\cdn_row_collection\amadeuse\single_hotel_data_lint_2"
 os.makedirs(output_dir_for_single, exist_ok=True)
 
 def generate_uuid():
@@ -93,7 +93,7 @@ hotel_codes = []
 for row in ws.iter_rows(min_row=2, values_only=True):  # Assuming first row is header
     code = row[0]
     if code:
-        hotel_codes.append(str(code))
+        hotel_codes.append(str(code).strip()) 
 
 for hotel_code in hotel_codes:
     out_path = os.path.join(output_dir_for_single, f"{hotel_code}.json")
