@@ -90,7 +90,7 @@ def xml_to_dict(element):
 wb = openpyxl.load_workbook(hotel_id_xlsx)
 ws = wb.active
 hotel_codes = []
-for row in ws.iter_rows(min_row=2, values_only=True):  # Assuming first row is header
+for row in ws.iter_rows(min_row=2, values_only=True):
     code = row[0]
     if code:
         hotel_codes.append(str(code).strip()) 
