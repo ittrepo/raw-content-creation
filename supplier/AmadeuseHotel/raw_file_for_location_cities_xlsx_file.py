@@ -117,7 +117,7 @@ def extract_and_save_hotel_info(response_content, output_dir):
 
                 # 👉 Skip if file already exists
                 if os.path.exists(out_path):
-                    print(f"Skipped existing hotel: {hotel_code}")
+                    print(f"⏩⏩⏩⏩⏩ Skipped existing hotel: {hotel_code}")
                     continue
 
                 out_data = {
