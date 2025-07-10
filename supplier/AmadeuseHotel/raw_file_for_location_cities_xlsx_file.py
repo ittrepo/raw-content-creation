@@ -52,47 +52,47 @@ def build_soap_request(latitude, longitude):
     start_date = (datetime.now(timezone.utc) + timedelta(days=1)).strftime("%Y-%m-%d")
     end_date = (datetime.now(timezone.utc) + timedelta(days=2)).strftime("%Y-%m-%d")
     soap_xml_request = f"""
-<soap:Envelope xmlns:soap='http://schemas.xmlsoap.org/soap/envelope/'>
-  <soap:Header>
-    <add:MessageID xmlns:add='http://www.w3.org/2005/08/addressing'>{uuid_value}</add:MessageID>
-    <add:Action xmlns:add='http://www.w3.org/2005/08/addressing'>http://webservices.amadeus.com/Hotel_MultiSingleAvailability_10.0</add:Action>
-    <add:To xmlns:add='http://www.w3.org/2005/08/addressing'>{url}/{wsap}</add:To>
-    <oas:Security xmlns:oas='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd'>
-      <oas:UsernameToken xmlns:oas1='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd' oas1:Id='UsernameToken-1'>
-        <oas:Username>{user_id}</oas:Username>
-        <oas:Nonce EncodingType='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary'>{nounce}</oas:Nonce>
-        <oas:Password Type='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordDigest'>{pass_sha}</oas:Password>
-        <oas1:Created>{date_str}</oas1:Created>
-      </oas:UsernameToken>
-    </oas:Security>
-    <AMA_SecurityHostedUser xmlns='http://xml.amadeus.com/2010/06/Security_v1'>
-      <UserID POS_Type='1' PseudoCityCode='{office_id}' AgentDutyCode='{duty_code}' RequestorType='{requestor_type}'/>
-    </AMA_SecurityHostedUser>
-  </soap:Header>
-  <soap:Body>
-<OTA_HotelAvailRQ EchoToken='MultiSingle' Version='4.000' SummaryOnly='true' AvailRatesOnly='true' OnRequestInd='true' RateRangeOnly='true' ExactMatchOnly='false' RateDetailsInd='true' SearchCacheLevel='Live' RequestedCurrency='USD'>
-  <AvailRequestSegments>
-      <AvailRequestSegment InfoSource='Distribution'>
-          <HotelSearchCriteria>
-              <Criterion ExactMatch='true'>
-                 <Position Latitude='{latitude}' Longitude='{longitude}'></Position>
-                  <Radius Distance='50' DistanceMeasure='DIS' UnitOfMeasureCode='2'></Radius>
-                  <StayDateRange Start='{start_date}' End='{end_date}' />
-                  <RoomStayCandidates>
-                      <RoomStayCandidate RoomID='1' Quantity='1'>
-                          <GuestCounts>
-                              <GuestCount AgeQualifyingCode='10' Count='1' />
-                          </GuestCounts>
-                      </RoomStayCandidate>
-                  </RoomStayCandidates>
-              </Criterion>
-          </HotelSearchCriteria>
-      </AvailRequestSegment>
-  </AvailRequestSegments>
-</OTA_HotelAvailRQ>
-  </soap:Body>
-</soap:Envelope>
-"""
+                    <soap:Envelope xmlns:soap='http://schemas.xmlsoap.org/soap/envelope/'>
+                    <soap:Header>
+                        <add:MessageID xmlns:add='http://www.w3.org/2005/08/addressing'>{uuid_value}</add:MessageID>
+                        <add:Action xmlns:add='http://www.w3.org/2005/08/addressing'>http://webservices.amadeus.com/Hotel_MultiSingleAvailability_10.0</add:Action>
+                        <add:To xmlns:add='http://www.w3.org/2005/08/addressing'>{url}/{wsap}</add:To>
+                        <oas:Security xmlns:oas='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd'>
+                        <oas:UsernameToken xmlns:oas1='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd' oas1:Id='UsernameToken-1'>
+                            <oas:Username>{user_id}</oas:Username>
+                            <oas:Nonce EncodingType='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary'>{nounce}</oas:Nonce>
+                            <oas:Password Type='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordDigest'>{pass_sha}</oas:Password>
+                            <oas1:Created>{date_str}</oas1:Created>
+                        </oas:UsernameToken>
+                        </oas:Security>
+                        <AMA_SecurityHostedUser xmlns='http://xml.amadeus.com/2010/06/Security_v1'>
+                        <UserID POS_Type='1' PseudoCityCode='{office_id}' AgentDutyCode='{duty_code}' RequestorType='{requestor_type}'/>
+                        </AMA_SecurityHostedUser>
+                    </soap:Header>
+                    <soap:Body>
+                    <OTA_HotelAvailRQ EchoToken='MultiSingle' Version='4.000' SummaryOnly='true' AvailRatesOnly='true' OnRequestInd='true' RateRangeOnly='true' ExactMatchOnly='false' RateDetailsInd='true' SearchCacheLevel='Live' RequestedCurrency='USD'>
+                    <AvailRequestSegments>
+                        <AvailRequestSegment InfoSource='Distribution'>
+                            <HotelSearchCriteria>
+                                <Criterion ExactMatch='true'>
+                                    <Position Latitude='{latitude}' Longitude='{longitude}'></Position>
+                                    <Radius Distance='50' DistanceMeasure='DIS' UnitOfMeasureCode='2'></Radius>
+                                    <StayDateRange Start='{start_date}' End='{end_date}' />
+                                    <RoomStayCandidates>
+                                        <RoomStayCandidate RoomID='1' Quantity='1'>
+                                            <GuestCounts>
+                                                <GuestCount AgeQualifyingCode='10' Count='1' />
+                                            </GuestCounts>
+                                        </RoomStayCandidate>
+                                    </RoomStayCandidates>
+                                </Criterion>
+                            </HotelSearchCriteria>
+                        </AvailRequestSegment>
+                    </AvailRequestSegments>
+                    </OTA_HotelAvailRQ>
+                    </soap:Body>
+                    </soap:Envelope>
+                    """
     return soap_xml_request, url
 
 def extract_and_save_hotel_info(response_content, output_dir):

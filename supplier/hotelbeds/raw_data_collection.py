@@ -4,17 +4,17 @@ from dotenv import load_dotenv
 import os
 import hashlib
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
+# from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging
 
 load_dotenv()
 
-HOTEL_ID_LIST = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/hotelbeds//hotelbeds_hotel_id_list.txt"
-TRACKING_FILE = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/hotelbeds//hotelbeds_tracking_file.txt"
-SUCCESS_FILE = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/hotelbeds//hotelbeds_successful_done_hotel_id_list.txt"
-NOT_FOUND_FILE = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/hotelbeds//hotelbeds_not_found.txt"
+HOTEL_ID_LIST = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/hotelbeds/new/hotelbeds_hotel_id_list.txt"
+TRACKING_FILE = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/hotelbeds/new/hotelbeds_tracking_file.txt"
+SUCCESS_FILE = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/hotelbeds/new/hotelbeds_successful_done_hotel_id_list.txt"
+NOT_FOUND_FILE = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/hotelbeds/new/hotelbeds_not_found.txt"
 
-BASE_PATH = f"D:/content_for_hotel_json/cdn_row_collection/hotelbeds"
+BASE_PATH = f"D:/content_for_hotel_json/cdn_row_collection/hotelbeds_new"
 REQUEST_DELAY = 1
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -142,26 +142,23 @@ def process_hotels():
     success_hotel_ids = []
     not_found_hotel_ids = []
 
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        future_to_hotel = {executor.submit(process_hotel, hotel_id): hotel_id for hotel_id in hotel_ids_to_process}
+    for hotel_id in hotel_ids_to_process[:]:  # iterate over a copy
+        hotel_id, success = process_hotel(hotel_id)
+        if success:
+            success_hotel_ids.append(hotel_id)
+        else:
+            not_found_hotel_ids.append(hotel_id)
 
-        for future in as_completed(future_to_hotel):
-            hotel_id, success = future.result()
-            if success:
-                success_hotel_ids.append(hotel_id)
-            else:
-                not_found_hotel_ids.append(hotel_id)
-
-            # Remove the hotel ID from the tracking file immediately after processing
-            hotel_ids_to_process.remove(hotel_id)
-            write_tracking_file(TRACKING_FILE, hotel_ids_to_process)
-            time.sleep(REQUEST_DELAY)
+        hotel_ids_to_process.remove(hotel_id)
+        write_tracking_file(TRACKING_FILE, hotel_ids_to_process)
+        time.sleep(REQUEST_DELAY)
 
     append_to_success_file(SUCCESS_FILE, success_hotel_ids)
     append_to_not_found_file(NOT_FOUND_FILE, not_found_hotel_ids)
 
     logging.info("Processing completed.")
 
+    
 # Run the function
 if __name__ == "__main__":
     process_hotels()
