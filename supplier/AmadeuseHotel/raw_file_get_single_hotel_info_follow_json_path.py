@@ -22,8 +22,8 @@ soap_action = 'http://webservices.amadeus.com/OTA_HotelDescriptiveInfoRQ_07.1_1A
 wsap = '1ASIWAAAAAK'
 url = os.getenv('AMADEUSE_LIVE_URL')
 
-output_dir = r"D:\content_for_hotel_json\cdn_row_collection\amadeuse\with_location"
-output_dir_for_single = r"D:\content_for_hotel_json\cdn_row_collection\amadeuse\single_hotel_data"
+output_dir = r"D:\content_for_hotel_json\cdn_row_collection\amadeushotel\with_location"
+output_dir_for_single = r"D:\content_for_hotel_json\cdn_row_collection\amadeushotel\single_hotel_data"
 os.makedirs(output_dir_for_single, exist_ok=True)
 
 def generate_uuid():

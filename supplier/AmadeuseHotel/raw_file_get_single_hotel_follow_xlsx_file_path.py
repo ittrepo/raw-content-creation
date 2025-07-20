@@ -25,8 +25,8 @@ wsap = '1ASIWAAAAAK'
 url = os.getenv('AMADEUSE_LIVE_URL')
 
 
-hotel_id_xlsx = r"D:\Rokon\ofc_git\row_content_create\supplier\AmadeuseHotel\amadeuse_hotel_list.xlsx"
-output_dir_for_single = r"D:\content_for_hotel_json\cdn_row_collection\amadeuse\single_hotel_data_lint_2"
+hotel_id_xlsx = r"D:\Rokon\ofc_git\row_content_create\supplier\amadeushotel\amadeuse_hotel_list.xlsx"
+output_dir_for_single = r"D:\content_for_hotel_json\cdn_row_collection\amadeushotel\single_hotel_data_lint_2"
 os.makedirs(output_dir_for_single, exist_ok=True)
 
 def generate_uuid():

@@ -134,7 +134,7 @@ def extract_and_save_hotel_info(response_content, output_dir):
 
 def main():
     xlsx_path = "hotels_cities.xlsx"
-    output_dir = r"D:\content_for_hotel_json\cdn_row_collection\amadeuse\with_location"
+    output_dir = r"D:\content_for_hotel_json\cdn_row_collection\amadeushotel\with_location"
     os.makedirs(output_dir, exist_ok=True)
 
     wb = openpyxl.load_workbook(xlsx_path)
