@@ -11,3 +11,4 @@ local_to_contabo.py
 ML
 *.xml
 contabo
+update_local_db.py

@@ -19,6 +19,7 @@ metadata = MetaData()
 rnr_table = Table(
     "rakuten_master", metadata,
     Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("vervotech_id", String(50), nullable=True),
     Column("hotel_code", String(50), nullable=False, unique=True),
     Column("hotel_name", String(255), nullable=False),
     Column("latitude", Float, nullable=True),
@@ -27,6 +28,8 @@ rnr_table = Table(
     Column("post_code", String(20), nullable=True),
     Column("stars", String(10), nullable=True),
     Column("country_code", String(5), nullable=True),
+    Column("primary_photo", String(500), nullable=True),
+    Column("property_type", String(30), nullable=True),
     Column("created_at", DateTime, default=datetime.utcnow),
     Column("modified_on", DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 )
@@ -55,6 +58,8 @@ with engine.begin() as conn, open(FAILED_IDS_FILE, "a", encoding="utf-8") as fai
             "post_code": data.get("address", {}).get("postal_code"),
             "stars": data.get("star_rating"),
             "country_code": data.get("country_code"),
+            "property_type": data.get("property_type"),
+            "primary_photo": data.get("primary_photo"),
             "created_at": datetime.utcnow(),
             "modified_on": datetime.utcnow()
         }
