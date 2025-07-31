@@ -14,7 +14,7 @@ HOTEL_ID_LIST = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/tbo
 TRACKING_FILE = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/tbo/tbohotel_tracking_file.txt"
 SUCCESS_FILE = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/tbo/successful_done_hotel_id_list.txt"
 NOT_FOUND_FILE = "D:/Rokon/ofc_git/row_content_create/hotel_id_count_function/tbo/tbohotel_not_found.txt"
-BASE_PATH = "D:/content_for_hotel_json/cdn_row_collection/tbo"
+BASE_PATH = "D:/content_for_hotel_json/cdn_row_collection/tbo_new"
 
 REQUEST_DELAY = 1
 MAX_WORKERS = 10  # Number of concurrent threads
