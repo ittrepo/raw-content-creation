@@ -8,10 +8,17 @@ import random
 import json
 from dotenv import load_dotenv
 import xml.etree.ElementTree as ET
+from concurrent.futures import ThreadPoolExecutor
 
+# ─────────────────────────────────────────────
+# CONFIGURATION
+# ─────────────────────────────────────────────
 load_dotenv()
+# output_dir = r"D:\content_for_hotel_json\cdn_row_collection\amadeuse\single_hotel_data"
+output_dir = r"/var/www/Storage-Contents/Hotel-Supplier-Raw-Contents/amadeushotel"
+hotel_id_file = "amadeus_hotel_id_list.txt"
+os.makedirs(output_dir, exist_ok=True)
 
-# ---------- Configuration ---------- #
 organization = 'NMC-SAUDI'
 user_id = os.getenv('AMADEUSE_USER_ID')
 password = 'psC6Gh=q3qPb'
@@ -22,18 +29,16 @@ soap_action = 'http://webservices.amadeus.com/OTA_HotelDescriptiveInfoRQ_07.1_1A
 wsap = '1ASIWAAAAAK'
 url = os.getenv('AMADEUSE_LIVE_URL')
 
-output_dir = r"D:\content_for_hotel_json\cdn_row_collection\amadeuse\with_location"
-output_dir_for_single = r"D:\content_for_hotel_json\cdn_row_collection\amadeuse\single_hotel_data"
-os.makedirs(output_dir_for_single, exist_ok=True)
-
+# ─────────────────────────────────────────────
+# UTILITY FUNCTIONS
+# ─────────────────────────────────────────────
 def generate_uuid():
     return str(uuid.uuid4())
 
 def get_timestamp():
     now = datetime.datetime.utcnow()
     micro = f"{now.microsecond // 1000:03d}"
-    timestamp = now.strftime('%Y-%m-%dT%H:%M:%S') + micro + 'Z'
-    return timestamp
+    return now.strftime('%Y-%m-%dT%H:%M:%S') + micro + 'Z'
 
 def generate_nonce():
     return base64.b64encode(str(random.randint(10000000, 99999999)).encode()).decode()
@@ -44,60 +49,41 @@ def generate_password_digest(nonce_b64, created, password):
     digest = hashlib.sha1(nonce_bytes + created.encode() + sha1_password).digest()
     return base64.b64encode(digest).decode()
 
-
 def remove_namespace(obj):
     if isinstance(obj, dict):
-        new_obj = {}
-        for k, v in obj.items():
-            # Remove the namespace from the key if present
-            if isinstance(k, str) and k.startswith("{http://www.opentravel.org/OTA/2003/05}"):
-                new_key = k.replace("{http://www.opentravel.org/OTA/2003/05}", "")
-            else:
-                new_key = k
-            new_obj[new_key] = remove_namespace(v)
-        return new_obj
+        return {k.split('}', 1)[-1] if '}' in k else k: remove_namespace(v) for k, v in obj.items()}
     elif isinstance(obj, list):
         return [remove_namespace(item) for item in obj]
-    else:
-        return obj
-    
+    return obj
 
 def xml_to_dict(element):
     result = {}
     if element.attrib:
         result.update(element.attrib)
     if element.text and element.text.strip():
-        if result:
-            result['text'] = element.text.strip()
-        else:
-            result = element.text.strip()
+        result['text'] = element.text.strip()
     for child in element:
         child_data = xml_to_dict(child)
-        if child.tag in result:
-            if isinstance(result[child.tag], list):
-                result[child.tag].append(child_data)
-            else:
-                result[child.tag] = [result[child.tag], child_data]
-        else:
-            result[child.tag] = child_data
+        result.setdefault(child.tag, []).append(child_data) if child.tag in result else result.update({child.tag: child_data})
     return result
 
-for filename in os.listdir(output_dir):
-    if filename.endswith('.json'):
-        hotel_code = os.path.splitext(filename)[0]
-        out_path = os.path.join(output_dir_for_single, f"{hotel_code}.json")
-        if os.path.exists(out_path):
-            print(f"⏩ Skipping {hotel_code}, file already exists.")
-            continue
+# ─────────────────────────────────────────────
+# MAIN WORKER FUNCTION
+# ─────────────────────────────────────────────
+def fetch_hotel_data(hotel_code):
+    out_path = os.path.join(output_dir, f"{hotel_code}.json")
+    if os.path.exists(out_path):
+        print(f"⏩ Skipping {hotel_code}, file already exists.")
+        return
 
-        print(f"Processing hotel_code: {hotel_code}")
+    print(f"🔄 Processing hotel_code: {hotel_code}")
 
+    try:
         uuid_val = generate_uuid()
         timestamp = get_timestamp()
         nonce = generate_nonce()
         password_digest = generate_password_digest(nonce, timestamp, password)
 
-        # ---------- Create SOAP Payload ---------- #
         soap_payload = f"""<?xml version="1.0" encoding="UTF-8"?>
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
   <soap:Header>
@@ -141,19 +127,27 @@ for filename in os.listdir(output_dir):
             'SOAPAction': soap_action,
         }
 
-        try:
-            response = requests.post(url, data=soap_payload.strip(), headers=headers, timeout=60)
-            # ...existing code...
-            if response.status_code == 200:
-                root = ET.fromstring(response.content)
-                response_dict = xml_to_dict(root)
-                response_dict = remove_namespace(response_dict)  # <--- Add this line
-                json_output = json.dumps(response_dict, indent=2)
-                with open(out_path, "w", encoding="utf-8") as f:
-                    f.write(json_output)
-                print(f"✅ Saved {out_path}")
-            # ...existing code...
-            else:
-                print(f"❌ Failed for {hotel_code}: HTTP {response.status_code}")
-        except Exception as e:
-            print(f"❌ Exception for {hotel_code}: {e}")
+        response = requests.post(url, data=soap_payload.strip(), headers=headers, timeout=60)
+
+        if response.status_code == 200:
+            root = ET.fromstring(response.content)
+            response_dict = remove_namespace(xml_to_dict(root))
+            with open(out_path, "w", encoding="utf-8") as f:
+                json.dump(response_dict, f, indent=2)
+            print(f"✅ Saved: {out_path}")
+        else:
+            print(f"❌ Failed {hotel_code}: HTTP {response.status_code}")
+    except Exception as e:
+        print(f"❌ Exception {hotel_code}: {e}")
+
+# ─────────────────────────────────────────────
+# EXECUTION
+# ─────────────────────────────────────────────
+if __name__ == "__main__":
+    with open(hotel_id_file, "r") as file:
+        hotel_ids = [line.strip() for line in file if line.strip()]
+
+    print(f"📦 Total hotels to process: {len(hotel_ids)}")
+
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        executor.map(fetch_hotel_data, hotel_ids)
