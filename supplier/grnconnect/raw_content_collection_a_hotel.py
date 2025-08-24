@@ -74,6 +74,6 @@ def get_supplier_own_raw_data(hotel_id):
 
 # Example usage:
 if __name__ == "__main__":
-    hotel_id = "1158431"
+    hotel_id = "1000059"
     combined = get_supplier_own_raw_data(hotel_id)
-    print(json.dumps(combined, indent=2))
+    # print(json.dumps(combined, indent=2))

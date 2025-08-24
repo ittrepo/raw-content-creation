@@ -60,7 +60,7 @@ def process_hotels():
     """
     Process hotels by fetching data and saving it as JSON files.
     """
-    hotel_ids = ["47503374"]  
+    hotel_ids = ["1622759"]  
 
     raw_path = BASE_PATH
     os.makedirs(raw_path, exist_ok=True)
