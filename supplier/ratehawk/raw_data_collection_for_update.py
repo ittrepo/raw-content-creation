@@ -4,16 +4,17 @@ from dotenv import load_dotenv
 import os
 import hashlib
 import time
+# from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging
 
 load_dotenv()
 
 
 # Constants
-HOTEL_ID_LIST = "/var/www/ScirptEngine/Python-Application/Raw-Content-Create-Function/ratehawk/ratehawk_id_list.txt"
-TRACKING_FILE = "/var/www/ScirptEngine/Python-Application/Raw-Content-Create-Function/ratehawk/ratehawk_tracking_file.txt"
-SUCCESS_FILE = "/var/www/ScirptEngine/Python-Application/Raw-Content-Create-Function/ratehawk/ratehawk_successful_done_hotel_id_list.txt"
-NOT_FOUND_FILE = "/var/www/ScirptEngine/Python-Application/Raw-Content-Create-Function/ratehawk/ratehawk_hotel_not_found.txt"
+HOTEL_ID_LIST = "/var/www/ScirptEngine/Python-Application/Raw-Content-Create-Function/ratehawk/agoda_hotel_id_list.txt"
+TRACKING_FILE = "/var/www/ScirptEngine/Python-Application/Raw-Content-Create-Function/ratehawk/agoda_tracking_file.txt"
+SUCCESS_FILE = "/var/www/ScirptEngine/Python-Application/Raw-Content-Create-Function/ratehawk/successful_done_hotel_id_list.txt"
+NOT_FOUND_FILE = "/var/www/ScirptEngine/Python-Application/Raw-Content-Create-Function/ratehawk/agoda_hotel_not_found.txt"
 BASE_PATH = "/var/www/Storage-Contents/Hotel-Supplier-Raw-Contents/ratehawk_new"
 
 REQUEST_DELAY = 1
@@ -51,8 +52,7 @@ def save_json(raw_path, hotel_id):
 
     try:
         with open(json_file_path, "w", encoding="utf-8") as file:
-            # file.write(json_data)
-            json.dump(json_data, file, indent=2)
+            file.write(json_data)
         logging.info(f"{hotel_id}.json saved successfully at {json_file_path}")
         return True
     except Exception as e:
