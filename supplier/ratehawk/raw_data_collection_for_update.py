@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 import os
 import hashlib
 import time
-# from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging
 
 load_dotenv()
